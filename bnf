@@ -1,0 +1,23 @@
+<formula> ::= ( <formula> )
+            | <simple_formula> <formula_tail>
+
+<simple_formula> ::= "forall" <variable> . <formula>
+                  | "exists" <variable> . <formula>
+                  | "not" <formula>
+                  | <predicate>(<term>, ...)
+
+<formula_tail> ::= "and" <formula>
+                 | "or" <formula>
+                 | "=>" <formula>
+                 | ε
+
+<term> ::= <variable>
+         | <function>(<term>, ...)
+
+<predicate> ::= <identifier>
+
+<function> ::= <identifier>
+
+<variable> ::= <identifier>
+
+<identifier> ::= <letter>*
