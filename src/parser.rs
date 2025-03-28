@@ -1,4 +1,5 @@
 use std::iter::Peekable;
+use std::fmt;
 
 use crate::language::*;
 
@@ -15,10 +16,17 @@ const KEYWORDS: [&str; 6] = [
 
 #[derive(Debug)]
 pub enum ParserError {
-    EmptyTokens,
+    EndOfTokens,
     WrongTerm,
     LexerError,
-    Unexpected
+    Unexpected(String)
+}
+
+
+impl fmt::Display for ParserError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 
@@ -73,23 +81,20 @@ impl<'a> Lexer<'a> {
 pub fn lex(input: &str) -> Result<TokenStream, String> {
     Ok(TokenStream {
        tokens: Lexer::new(input).lex()?,
-        i: 0
     })
 }
 
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TokenStream<'a> {
-    tokens: Vec<&'a str>,
-    i: usize,
+    tokens: Vec<&'a str>
 }
 
 
 impl TokenStream<'_> {
     fn new(tokens: Vec<&str>) -> TokenStream {
         TokenStream {
-            tokens,
-            i: 0,
+            tokens
         }
     }
 
@@ -126,22 +131,20 @@ impl<'a> Iterator for TokenStreamIterator<'a> {
 
 type TokenIter<'a> = Peekable<TokenStreamIterator<'a>>;
 
-
-
 fn parse_identifier(it: &mut TokenIter) -> Result<String, ParserError> {
     if let Some(&token) = it.peek() {
         if token.chars().all(|c| c.is_ascii_alphabetic()) {
             if KEYWORDS.contains(&token) {
-                return Err(ParserError::Unexpected)
+                return Err(ParserError::Unexpected(token.to_string()))
             }
 
             it.next();
             Ok(token.to_string())
         } else {
-            Err(ParserError::Unexpected)
+            Err(ParserError::Unexpected(token.to_string()))
         }
     } else {
-        Err(ParserError::EmptyTokens)
+        Err(ParserError::EndOfTokens)
     }
 }
 
@@ -157,7 +160,6 @@ fn parse_func(it: &mut TokenIter) -> Result<Func, ParserError> {
     let terms = parse_list(it)?;
     Ok(Func { name: id, terms })
 }
-
 
 
 fn parse_term(it: &mut TokenIter) -> Result<Term, ParserError> {
@@ -176,7 +178,10 @@ fn parse_list(it: &mut TokenIter) -> Result<Vec<Term>, ParserError> {
     if let Some(&"(") = it.peek() {
         it.next();
     } else {
-        return Err(ParserError::Unexpected);
+        match it.peek() {
+            Some(&token) => return Err(ParserError::Unexpected(token.to_string())),
+            None => return Err(ParserError::EndOfTokens)
+        };
     }
 
     let mut c = 0;
@@ -195,12 +200,12 @@ fn parse_list(it: &mut TokenIter) -> Result<Vec<Term>, ParserError> {
             if token == "," {
                 it.next();
             } else {
-                return Err(ParserError::Unexpected);
+                return Err(ParserError::Unexpected(token.to_string()));
             }
         }
         c += 1;
     }
-    Err(ParserError::Unexpected)
+    Err(ParserError::EndOfTokens)
 }
 
 
@@ -210,17 +215,16 @@ fn parse_keyword(it: &mut TokenIter, keyword: &str) -> Result<(), ParserError> {
             it.next();
             Ok(())
         } else {
-            Err(ParserError::Unexpected)
+            Err(ParserError::Unexpected(token.to_string()))
         }
     } else {
-        Err(ParserError::Unexpected)
+        Err(ParserError::EndOfTokens)
     }
 }
 
 
 fn parse_forall(it: &mut TokenIter) -> Result<Formula, ParserError> {
     let _ = parse_keyword(it, "forall");
-
     let var = parse_term(it)?;
     match var {
         Term::Var(_) => {},
@@ -269,7 +273,7 @@ fn parse_simple_formula(it: &mut TokenIter) -> Result<Formula, ParserError> {
             _ => parse_pred(it)
         }
     } else {
-        Err(ParserError::EmptyTokens)
+        Err(ParserError::EndOfTokens)
     }
 }
 
@@ -281,8 +285,8 @@ fn parse_formula_tail(it: &mut TokenIter) -> Result<Option<ToFormula>, ParserErr
 
     let parse_tail = |it: &mut TokenIter, op: Op| -> Result<Option<ToFormula>, ParserError> {
         it.next();
-        let formula1 = parse_formula(it)?;
-        Ok(Some(Box::new(move |formula2| {
+        let formula2 = parse_formula(it)?;
+        Ok(Some(Box::new(move |formula1| {
             op(formula1, formula2)
         })))
     };
@@ -292,7 +296,8 @@ fn parse_formula_tail(it: &mut TokenIter) -> Result<Option<ToFormula>, ParserErr
             "and" => parse_tail(it, Formula::and),
             "or" => parse_tail(it, Formula::or),
             "=>" => parse_tail(it, Formula::implies),
-            _ => Ok(None)
+            ")" => Ok(None),
+            _ => return Err(ParserError::Unexpected(token.to_string()))
         }
 
     } else {
@@ -304,7 +309,13 @@ fn parse_formula_tail(it: &mut TokenIter) -> Result<Option<ToFormula>, ParserErr
 fn parse_formula(it: &mut TokenIter) -> Result<Formula, ParserError> {
     if let Some(&"(") = it.peek() {
         let _ = parse_keyword(it, "(")?;
-        parse_formula(it)
+        let simple = parse_formula(it)?;
+        let _ = parse_keyword(it, ")")?;
+        let tail = parse_formula_tail(it)?;
+        match tail {
+            Some(f) => Ok(f(simple)),
+            None => Ok(simple)
+        }
     } else {
         let simple = parse_simple_formula(it)?;
         let tail = parse_formula_tail(it)?;

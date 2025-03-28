@@ -1,4 +1,4 @@
-<formula> ::= ( <formula> )
+<formula> ::= ( <formula> ) <formula_tail>
             | <simple_formula> <formula_tail>
 
 <simple_formula> ::= "forall" <variable> . <formula>
