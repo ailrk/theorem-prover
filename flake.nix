@@ -2,7 +2,7 @@
   description = "A simple Rust project using Nix flakes and flake-utils without rust-overlay";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable"; # Adjust to your preferred version
+    nixpkgs.url = "github:NixOS/nixpkgs/8f3cf34b8d2e2caf4ae5ee1d1fddc1baab4c5964";
     flake-utils.url = "github:numtide/flake-utils";         # Import flake-utils
   };
 
