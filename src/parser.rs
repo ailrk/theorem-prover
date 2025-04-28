@@ -52,18 +52,19 @@ impl<'a> Lexer<'a> {
         let mut it = self.input.chars().enumerate().peekable();
         while let Some((idx, c)) = it.next() {
             match c {
-                ' ' => {},
+                _ if c.is_whitespace() => {},
                 '.' | ',' | '(' | ')' => {
                     self.push(idx, idx+1);
                 },
                 _ if c.is_alphabetic() || ['=', '>'].contains(&c) => {
                     let mut end = idx + 1;
                     while let Some(&(e, c)) = it.peek() {
-                        end = e;
-                        if !(c.is_alphabetic() || ['=', '>'].contains(&c)) {
-                            break;
-                        } else {
+                        if c.is_alphabetic() || ['=', '>'].contains(&c) {
                             it.next();
+                            end = e + 1;
+                        }
+                        else {
+                            break;
                         }
                     }
                     self.push(idx, end);
