@@ -5,13 +5,14 @@ use std::hash::Hash;
 
 #[derive(Hash, PartialEq, Eq, Clone)]
 pub enum Formula {
-    Pred(Box<Pred>),
-    Not(Box<Not>),
-    And(Box<And>),
-    Or(Box<Or>),
-    Implies(Box<Implies>),
-    ForAll(Box<ForAll>),
-    Exists(Box<Exists>),
+    Pred(Pred),
+    Not(Not),
+    And(And),
+    Or(Or),
+    Implies(Implies),
+    ForAll(ForAll),
+    Exists(Exists),
+    Dummy,
 }
 
 
@@ -58,8 +59,8 @@ pub struct And {
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Or {
-    formula1: Box<Formula>,
-    formula2: Box<Formula>
+    pub formula1: Box<Formula>,
+    pub formula2: Box<Formula>
 }
 
 
@@ -168,56 +169,59 @@ impl Formula {
                 write!(f, "\n")?;
                 exists.formula.fmt_with_indent(f, indent + 1)?;
             }
+            Formula::Dummy => {
+                write!(f, "{}Dummy", indent_str)?;
+            }
         };
         write!(f, ")")
     }
 
     pub fn pred(name: &str, terms: Vec<Term>) -> Formula {
-        Formula::Pred(Box::new(Pred {
+        Formula::Pred(Pred {
             name: name.to_string(),
             terms
-        }))
+        })
     }
 
     pub fn implies(formula1: Formula, formula2: Formula) -> Formula {
-        Formula::Implies(Box::new(Implies {
+        Formula::Implies(Implies {
             formula1: Box::new(formula1),
             formula2: Box::new(formula2)
-        }))
+        })
     }
 
     pub fn or(formula1: Formula, formula2: Formula) -> Formula {
-        Formula::Or(Box::new(Or {
+        Formula::Or(Or {
             formula1: Box::new(formula1),
             formula2: Box::new(formula2)
-        }))
+        })
     }
 
     pub fn and(formula1: Formula, formula2: Formula) -> Formula {
-        Formula::And(Box::new(And {
+        Formula::And(And {
             formula1: Box::new(formula1),
             formula2: Box::new(formula2)
-        }))
+        })
     }
 
     pub fn not(formula: Formula) -> Formula {
-        Formula::Not(Box::new(Not {
+        Formula::Not(Not {
             formula: Box::new(formula)
-        }))
+        })
     }
 
     pub fn forall(var: Term, formula: Formula) -> Formula {
-        Formula::ForAll(Box::new(ForAll {
+        Formula::ForAll(ForAll {
             var: Box::new(var),
             formula: Box::new(formula)
-        }))
+        })
     }
 
     pub fn exists(var: Term, formula: Formula) -> Formula {
-        Formula::Exists(Box::new(Exists {
+        Formula::Exists(Exists {
             var: Box::new(var),
             formula: Box::new(formula)
-        }))
+        })
     }
 }
 
@@ -260,7 +264,17 @@ impl fmt::Display for Formula {
             Formula::Exists(exists) => {
                 write!(f, "(∃{}.{})", exists.var , exists.formula)
             },
+            Formula::Dummy => {
+                write!(f, "Dummy")
+            }
         }
+    }
+}
+
+
+impl Default for Formula {
+    fn default() -> Self {
+        Formula::Dummy
     }
 }
 

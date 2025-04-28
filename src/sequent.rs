@@ -1,52 +1,5 @@
 use crate::language::*;
-use std::collections::HashMap;
 use std::fmt::{self};
-
-
-#[derive(Eq, PartialEq, Clone, Debug)]
-struct Unifier(Vec<HashMap<Term, Term>>);
-
-
-impl Unifier {
-    fn new() -> Self {
-        Unifier (vec![])
-    }
-
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    fn cascade(&mut self, other: &mut Unifier) {
-        self.0.append(&mut other.0)
-    }
-}
-
-
-impl Formula {
-    fn to_pnf(&mut self) -> &mut Formula {
-        todo!()
-    }
-
-    fn to_cnf(&mut self) -> &mut Formula {
-        todo!()
-    }
-
-    fn skolemize(&mut self) -> &mut Formula {
-        todo!()
-    }
-
-    fn to_casual_form(&mut self) -> &mut Formula {
-        todo!()
-    }
-
-    fn unify(&mut self) -> Unifier {
-        todo!()
-    }
-
-    fn resolve(&mut self) {
-        todo!()
-    }
-}
 
 
 #[derive(Eq, PartialEq, Clone, Debug)]
