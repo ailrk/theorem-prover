@@ -152,7 +152,7 @@ fn parse_identifier(it: &mut TokenIter) -> Result<String, ParserError> {
 
 fn parse_var(it: &mut TokenIter) -> Result<Var, ParserError> {
     let id = parse_identifier(it)?;
-    Ok(Var { name: id, time: 0 })
+    Ok(Var { name: id })
 }
 
 
@@ -166,10 +166,10 @@ fn parse_func(it: &mut TokenIter) -> Result<Func, ParserError> {
 fn parse_term(it: &mut TokenIter) -> Result<Term, ParserError> {
     let it1 = it.clone();
     match parse_func(it) {
-        Ok(s) => Ok(Term::Func(Box::new(s))),
+        Ok(s) => Ok(Term::Func(s)),
         Err(_) => {
             *it = it1;
-            parse_var(it).map(|var| Term::Var(Box::new(var)))
+            parse_var(it).map(|var| Term::Var(var))
         }
     }
 }
@@ -226,11 +226,12 @@ fn parse_keyword(it: &mut TokenIter, keyword: &str) -> Result<(), ParserError> {
 
 fn parse_forall(it: &mut TokenIter) -> Result<Formula, ParserError> {
     let _ = parse_keyword(it, "forall");
-    let var = parse_term(it)?;
-    match var {
-        Term::Var(_) => {},
-        _ => return Err(ParserError::WrongTerm)
-    }
+    let var = {
+        match parse_term(it)? {
+            Term::Var(v) => v,
+            _ => return Err(ParserError::WrongTerm)
+        }
+    };
     let _ = parse_keyword(it, ".");
     let formula = parse_formula(it)?;
     Ok(Formula::forall(var, formula))
@@ -240,11 +241,13 @@ fn parse_forall(it: &mut TokenIter) -> Result<Formula, ParserError> {
 fn parse_exists(it: &mut TokenIter) -> Result<Formula, ParserError> {
     let _ = parse_keyword(it, "exists");
 
-    let var = parse_term(it)?;
-    match var {
-        Term::Var(_) => {},
-        _ => return Err(ParserError::WrongTerm)
-    }
+    let var = {
+        match parse_term(it)? {
+            Term::Var(v) => v,
+            _ => return Err(ParserError::WrongTerm)
+        }
+    };
+
     let _ = parse_keyword(it, ".");
     let formula = parse_formula(it)?;
     Ok(Formula::exists(var, formula))
