@@ -36,6 +36,8 @@ fn test_substitution() {
     substitute("P(x)", "x", "y");
     substitute("P(x)", "x", "y");
     substitute("forall a. P(f(a))", "x", "y");
+    substitute("forall x. P(x) and P(y)", "y", "x");
+    substitute("exists x. P(x) and P(y)", "y", "x");
     substitute("forall a. P(a) and (forall b. P(b))", "x", "y");
     substitute("forall x. (P(x) => Q(x))", "x", "y");
     substitute("forall x. (exists y. (P(x) => Q(y)))", "x", "y");

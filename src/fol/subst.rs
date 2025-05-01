@@ -58,30 +58,30 @@ impl<S> Formula<S> {
              */
             Formula::ForAll(_) => {
                 let mut taken = std::mem::take(self);
+                if let Formula::ForAll(ref forall) = taken {
+                    if to.free_vars().contains(&forall.var) {
+                        taken.alpha_rename();
+                    }
+                }
                 if let Formula::ForAll(ref mut forall) = taken {
                     if forall.var == from { // bounded
-                    } else if to.free_vars().contains(&forall.var){
-                        let free_vars = self.free_vars();
-                        let fresh = fresh_name(&from, &free_vars);
-                        forall.var = fresh;
-                        forall.formula.substitute(from.clone(), to);
                     } else {
-                        forall.formula.substitute(from.clone(), to);
+                        forall.formula.substitute(from, to);
                     }
                 }
                 *self = std::mem::take(&mut taken)
             },
             Formula::Exists(_) => {
                 let mut taken = std::mem::take(self);
+                if let Formula::Exists(ref exists) = taken {
+                    if to.free_vars().contains(&exists.var) {
+                        taken.alpha_rename();
+                    }
+                }
                 if let Formula::Exists(ref mut exists) = taken {
                     if exists.var == from { // bounded
-                    } else if to.free_vars().contains(&exists.var){
-                        let free_vars = self.free_vars();
-                        let fresh = fresh_name(&from, &free_vars);
-                        exists.var = fresh;
-                        exists.formula.substitute(from.clone(), to);
                     } else {
-                        exists.formula.substitute(from.clone(), to);
+                        exists.formula.substitute(from, to);
                     }
                 }
                 *self = std::mem::take(&mut taken)
@@ -89,12 +89,33 @@ impl<S> Formula<S> {
             Formula::Dummy => {},
         }
     }
+
+    /* Alpha rename a bound variable to a fresh name */
+    pub fn alpha_rename(&mut self) {
+        match self {
+            Formula::ForAll(ref mut forall) => {
+                let var = forall.var.clone();
+                let free_vars = forall.formula.free_vars();
+                let fresh = fresh_name(&var, &free_vars);
+                forall.var = fresh.clone();
+                forall.formula.substitute(var, fresh.to_term());
+            },
+            Formula::Exists(ref mut exists) => {
+                let var = exists.var.clone();
+                let free_vars = exists.formula.free_vars();
+                let fresh = fresh_name(&var, &free_vars);
+                exists.var = fresh.clone();
+                exists.formula.substitute(var, fresh.to_term());
+            },
+            _ => {}
+        }
+    }
 }
 
 
 fn fresh_name(base: &Var, taken: &HashSet<Var>) -> Var {
     for i in 0.. {
-        let name = Var::from_string(format!("{}_{}", base.to_term(), i));
+        let name = Var::from_string(format!("{}{}", base.to_term(), i));
         if !taken.contains(&name) {
             return name;
         }

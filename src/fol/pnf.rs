@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::fol::ast::*;
 
 
@@ -59,6 +61,35 @@ fn pnf_unop(unop: impl Fn(Formula<Pnf>) -> Formula<Pnf>, child: Formula<Nnf>) ->
 fn pnf_binop(binop: impl Fn(Formula<Pnf>, Formula<Pnf>) -> Formula<Pnf>, left: Formula<Nnf>, right: Formula<Nnf>) -> Formula<Pnf> {
     let mut left_pnfed = to_pnf(left);
     let mut right_pnfed = to_pnf(right);
+    let left_vars = first_non_quantified(&mut left_pnfed).free_vars();
+    let right_vars = first_non_quantified(&mut right_pnfed).free_vars();
+    let conflicts = left_vars.intersection(&right_vars).collect::<HashSet<_>>();
+    let mut r = &mut right_pnfed;
+    loop {
+        match r {
+            Formula::Exists(_) => {
+                if let Formula::Exists(exists) = r {
+                    if conflicts.contains(&exists.var) {
+                        r.alpha_rename();
+                    }
+                }
+                if let Formula::Exists(exists) = r {
+                    r = &mut *exists.formula;
+                }
+            },
+            Formula::ForAll(_) => {
+                if let Formula::ForAll(forall) = r {
+                    if conflicts.contains(&forall.var) {
+                        r.alpha_rename();
+                    }
+                }
+                if let Formula::ForAll(forall) = r {
+                    r = &mut *forall.formula;
+                }
+            },
+            _ => break
+        }
+    }
     let new_body = binop(
         std::mem::take(first_non_quantified(&mut left_pnfed)),
         std::mem::take(first_non_quantified(&mut right_pnfed)));
