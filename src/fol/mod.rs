@@ -3,3 +3,8 @@ pub mod parser;
 pub mod subst;
 pub mod fmt;
 pub mod free;
+pub mod cnf;
+pub mod pnf;
+pub mod nnf;
+pub mod skolem;
+pub mod ground;

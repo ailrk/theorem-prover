@@ -1,6 +1,6 @@
 use crate::fol::ast::*;
 
 
-fn resolve(formula: &mut Formula) {
+fn resolve<S>(formula: &mut Formula<S>) {
     todo!()
 }

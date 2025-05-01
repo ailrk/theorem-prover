@@ -25,7 +25,7 @@ impl Term {
 }
 
 
-impl Formula {
+impl<S> Formula<S> {
     /* Replace var with term. */
     pub fn substitute(&mut self, from: Var, to: &mut Term) {
         match self {

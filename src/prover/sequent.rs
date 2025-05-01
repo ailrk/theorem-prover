@@ -3,14 +3,14 @@ use std::fmt::{self};
 
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct Sequent {
-    pub left: Vec<Formula>,
-    pub right: Vec<Formula>,
+pub struct Sequent<S> {
+    pub left: Vec<Formula<S>>,
+    pub right: Vec<Formula<S>>,
     pub depth: usize
 }
 
 
-impl fmt::Display for Sequent {
+impl<S> fmt::Display for Sequent<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Sequent { left, right, .. } => {

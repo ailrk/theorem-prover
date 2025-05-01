@@ -25,7 +25,7 @@ impl Term {
 }
 
 
-impl Formula {
+impl<S> Formula<S> {
     pub fn free_vars(&self) -> HashSet<Var> {
         let mut vars = HashSet::new();
         self.collect_free_vars(&mut vars);

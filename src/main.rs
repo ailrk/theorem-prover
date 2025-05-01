@@ -1,4 +1,3 @@
-mod transform;
 mod sat;
 mod fol;
 mod prover;
@@ -55,12 +54,14 @@ fn test_substitution() {
 
 fn test_transform() {
     fn transform(input: &str) {
-        let mut t = parser::parse(input).unwrap();
+        let t = parser::parse(input).unwrap();
         println!("\x1b[32;1m{}\x1b[0m", t);
-        transform::pnf::to_pnf(&mut t);
+        let t = t.to_pnf();
         println!("  +-pnf---> {}", t);
-        transform::skolem::skolemize(&mut t, false);
+        let t = t.skolemize();
         println!("  +-skole-> {}", t);
+        let t = t.ground();
+        println!("  +-ground-> {}", t);
         println!("");
     }
     println!("Transform:");

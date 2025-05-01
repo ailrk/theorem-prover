@@ -224,7 +224,7 @@ fn parse_keyword(it: &mut TokenIter, keyword: &str) -> Result<(), ParserError> {
 }
 
 
-fn parse_forall(it: &mut TokenIter) -> Result<Formula, ParserError> {
+fn parse_forall(it: &mut TokenIter) -> Result<Formula<Raw>, ParserError> {
     let _ = parse_keyword(it, "forall");
     let var = {
         match parse_term(it)? {
@@ -238,7 +238,7 @@ fn parse_forall(it: &mut TokenIter) -> Result<Formula, ParserError> {
 }
 
 
-fn parse_exists(it: &mut TokenIter) -> Result<Formula, ParserError> {
+fn parse_exists(it: &mut TokenIter) -> Result<Formula<Raw>, ParserError> {
     let _ = parse_keyword(it, "exists");
 
     let var = {
@@ -254,21 +254,21 @@ fn parse_exists(it: &mut TokenIter) -> Result<Formula, ParserError> {
 }
 
 
-fn parse_not(it: &mut TokenIter) -> Result<Formula, ParserError> {
+fn parse_not(it: &mut TokenIter) -> Result<Formula<Raw>, ParserError> {
     let _ = parse_keyword(it, "not");
     let formula = parse_formula(it)?;
     Ok(Formula::not(formula))
 }
 
 
-fn parse_pred(it: &mut TokenIter) -> Result<Formula, ParserError> {
+fn parse_pred(it: &mut TokenIter) -> Result<Formula<Raw>, ParserError> {
     let id = parse_identifier(it)?;
     let terms = parse_list(it)?;
     Ok(Formula::pred(&id, terms))
 }
 
 
-fn parse_simple_formula(it: &mut TokenIter) -> Result<Formula, ParserError> {
+fn parse_simple_formula(it: &mut TokenIter) -> Result<Formula<Raw>, ParserError> {
     if let Some(&token) = it.peek() {
         match token {
             "forall" => parse_forall(it),
@@ -282,10 +282,10 @@ fn parse_simple_formula(it: &mut TokenIter) -> Result<Formula, ParserError> {
 }
 
 
-type ToFormula = Box<dyn FnOnce (Formula) -> Formula>;
+type ToFormula = Box<dyn FnOnce (Formula<Raw>) -> Formula<Raw>>;
 
 fn parse_formula_tail(it: &mut TokenIter) -> Result<Option<ToFormula>, ParserError> {
-    type Op = fn(Formula, Formula) -> Formula;
+    type Op = fn(Formula<Raw>, Formula<Raw>) -> Formula<Raw>;
 
     let parse_tail = |it: &mut TokenIter, op: Op| -> Result<Option<ToFormula>, ParserError> {
         it.next();
@@ -311,7 +311,7 @@ fn parse_formula_tail(it: &mut TokenIter) -> Result<Option<ToFormula>, ParserErr
 }
 
 
-fn parse_formula(it: &mut TokenIter) -> Result<Formula, ParserError> {
+fn parse_formula(it: &mut TokenIter) -> Result<Formula<Raw>, ParserError> {
     if let Some(&"(") = it.peek() {
         let _ = parse_keyword(it, "(")?;
         let simple = parse_formula(it)?;
@@ -332,7 +332,7 @@ fn parse_formula(it: &mut TokenIter) -> Result<Formula, ParserError> {
 }
 
 
-pub fn parse(input: &str) -> Result<Formula, ParserError> {
+pub fn parse(input: &str) -> Result<Formula<Raw>, ParserError> {
     let mut s = match lex(input) {
         Ok(s) => s,
         Err(_) => return Err(ParserError::LexerError)

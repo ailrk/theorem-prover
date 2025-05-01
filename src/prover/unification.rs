@@ -21,6 +21,6 @@ impl Unifier {
 }
 
 
-fn unify(formula: &mut Formula) -> Unifier {
+fn unify<S>(formula: &mut Formula<S>) -> Unifier {
     todo!()
 }

@@ -18,6 +18,13 @@ impl SkolemState {
 }
 
 
+impl Formula<Pnf> {
+    pub fn skolemize(self) -> Formula<Skolemized> {
+        skolemize(self)
+    }
+}
+
+
 /* Perform skolemization to eliminate existial quantifiers.
  * The input `formula` needs to be in PNF form.
  * Skolemized formula will have no existential quantifiers, the existing one will be
@@ -29,40 +36,37 @@ impl SkolemState {
  *
  * The resulting formula is Equisatisfiable to the original one.
  * */
-pub fn skolemize(formula: &mut Formula, drop_univeral: bool) {
+fn skolemize(mut formula: Formula<Pnf> ) -> Formula<Skolemized> {
     let mut uvars = vec![];
     collect_universal_vars(&formula, &mut uvars);
     let uvars = uvars;
     let mut state = SkolemState::new();
     loop {
-        let taken = std::mem::take(formula);
-        match taken {
+        match formula {
             Formula::Exists(mut exists) => {
                 let var = exists.var.clone();
                 let mut skolem = fresh_skolem(&uvars, &mut state);
                 first_non_quantified(&mut exists.formula).substitute(var, &mut skolem);
-                *formula = *exists.formula;
+                formula = *exists.formula;
             },
             Formula::ForAll(forall) => {
-                *formula = *forall.formula;
+                formula = *forall.formula;
             },
             _ => {
-                *formula = taken;
                 break;
             }
         }
     }
 
-    if !drop_univeral { // rewrap
-        for var in uvars.into_iter().rev() {
-            let rest = std::mem::take(formula);
-            *formula = Formula::forall(Var::from_string(var), rest);
-        }
+    for var in uvars.into_iter().rev() {
+        let rest = formula;
+        formula = Formula::forall(Var::from_string(var), rest);
     }
+    formula.cast()
 }
 
 
-fn first_existential(formula: &mut Formula) -> &mut Formula {
+fn first_existential(formula: &mut Formula<Raw>) -> &mut Formula<Raw> {
     match formula {
         Formula::ForAll(forall) => first_existential(&mut forall.formula),
         Formula::Exists(_) => formula,
@@ -71,7 +75,7 @@ fn first_existential(formula: &mut Formula) -> &mut Formula {
 }
 
 
-fn first_non_quantified(formula: &mut Formula) -> &mut Formula {
+fn first_non_quantified(formula: &mut Formula<Pnf>) -> &mut Formula<Pnf> {
     match formula {
         Formula::ForAll(forall) => first_non_quantified(&mut forall.formula),
         Formula::Exists(exists) => first_non_quantified(&mut exists.formula),
@@ -93,7 +97,7 @@ fn fresh_skolem(uvars: &[String], state: &mut SkolemState) -> Term {
 }
 
 
-fn collect_universal_vars(formula: &Formula, out: &mut Vec<String>) {
+fn collect_universal_vars(formula: &Formula<Pnf>, out: &mut Vec<String>) {
     debug_assert!(matches!(formula, Formula::ForAll(_) | Formula::Exists(_) | _), "Expected PNF formula");
     match formula {
         Formula::ForAll(forall) => {

@@ -32,7 +32,7 @@ impl Term {
 }
 
 
-impl Formula {
+impl<S> Formula<S> {
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
         let indent_str = "  ".repeat(indent);
         match self {
