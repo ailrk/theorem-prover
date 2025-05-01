@@ -1,4 +1,4 @@
-use crate::language::ast::*;
+use crate::fol::ast::*;
 use std::fmt::{self};
 
 
@@ -60,6 +60,12 @@ impl Formula {
                 write!(f, "\n")?;
                 imp.formula2.fmt_with_indent(f, indent + 1)?;
             },
+            Formula::Iff(iff) => {
+                write!(f, "{}(<=>\n", indent_str)?;
+                iff.formula1.fmt_with_indent(f, indent + 1)?;
+                write!(f, "\n")?;
+                iff.formula2.fmt_with_indent(f, indent + 1)?;
+            },
             Formula::ForAll(forall) => {
                 write!(f, "{}(Forall {:?}\n", indent_str, forall.var)?;
                 forall.formula.fmt_with_indent(f, indent + 1)?;
@@ -101,6 +107,9 @@ impl Formula {
             },
             Formula::Implies(imp) => {
                 write!(f, "({} → {})", imp.formula1, imp.formula2)
+            },
+            Formula::Iff(iff) => {
+                write!(f, "({} ⇔ {})", iff.formula1, iff.formula2)
             },
             Formula::ForAll(forall) => {
                 write!(f, "(∀{}.{})", forall.var.to_term(), forall.formula)

@@ -1,6 +1,11 @@
-use std::collections::HashSet;
 use std::fmt::{self};
 use std::hash::Hash;
+
+
+#[derive(Debug, Clone)] pub struct Raw;
+#[derive(Debug, Clone)] pub struct Pnf;
+#[derive(Debug, Clone)] pub struct Skolemized;
+#[derive(Debug, Clone)] pub struct Grounded;
 
 
 #[derive(Hash, PartialEq, Eq, Clone)]
@@ -10,6 +15,7 @@ pub enum Formula {
     And(And),
     Or(Or),
     Implies(Implies),
+    Iff(Iff),
     ForAll(ForAll),
     Exists(Exists),
     Dummy,
@@ -66,6 +72,13 @@ pub struct Or {
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Implies {
+    pub formula1: Box<Formula>,
+    pub formula2: Box<Formula>
+}
+
+
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+pub struct Iff {
     pub formula1: Box<Formula>,
     pub formula2: Box<Formula>
 }
@@ -145,6 +158,13 @@ impl Formula {
         })
     }
 
+    pub fn iff(formula1: Formula, formula2: Formula) -> Formula {
+        Formula::Iff(Iff {
+            formula1: Box::new(formula1),
+            formula2: Box::new(formula2)
+        })
+    }
+
     pub fn or(formula1: Formula, formula2: Formula) -> Formula {
         Formula::Or(Or {
             formula1: Box::new(formula1),
@@ -199,11 +219,4 @@ impl Default for Formula {
     fn default() -> Self {
         Formula::Dummy
     }
-}
-
-
-fn into_unions(sets: Vec<HashSet<Term>>) -> HashSet<Term> {
-    sets.into_iter().fold(HashSet::new(), |b, a| -> HashSet<Term> {
-        a.into_iter().chain(b.into_iter()).collect()
-    })
 }

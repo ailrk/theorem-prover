@@ -1,4 +1,4 @@
-use crate::language::ast::*;
+use crate::fol::ast::*;
 
 
 pub struct SkolemState {

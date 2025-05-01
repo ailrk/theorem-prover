@@ -1,4 +1,4 @@
-use crate::language::ast::*;
+use crate::fol::ast::*;
 
 
 /* Prenex normal form. This form guarantees all forall and exists
@@ -13,6 +13,7 @@ pub fn to_pnf(formula: &mut Formula) {
         Formula::ForAll(mut forall) => { to_pnf(&mut forall.formula); *formula = Formula::ForAll(forall); },
         Formula::Exists(mut exists) => { to_pnf(&mut exists.formula); *formula = Formula::Exists(exists); },
         Formula::Implies(mut imp) => pnf_binop(formula, Formula::implies, &mut imp.formula1, &mut imp.formula2),
+        Formula::Iff(mut iff) => pnf_binop(formula, Formula::iff, &mut iff.formula1, &mut iff.formula2),
         Formula::And(mut and) => pnf_binop(formula, Formula::and, &mut and.formula1, &mut and.formula2),
         Formula::Or(mut or) => pnf_binop(formula, Formula::or, &mut or.formula1, &mut or.formula2),
         Formula::Not(mut not) => pnf_unop(formula, Formula::not, &mut not.formula),

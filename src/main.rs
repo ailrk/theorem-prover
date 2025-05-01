@@ -1,7 +1,9 @@
-mod language;
 mod transform;
-use language::parser;
-use language::ast;
+mod sat;
+mod fol;
+mod prover;
+use fol::parser;
+use fol::ast;
 
 
 fn test_parse() {
@@ -16,6 +18,8 @@ fn test_parse() {
     println!("{}", parser::parse("forall x. P(x) => (Q(x) => P(x))").unwrap());
     println!("{}", parser::parse("exists x. (P(x) => forall y. P(y))").unwrap());
     println!("{}", parser::parse("exists x. (P(x) => forall y. P(y))").unwrap());
+    println!("{}", parser::parse("exists x. (P(x) <=> Q(x))").unwrap());
+    println!("{}", parser::parse("forall x. (P(x) <=> Q(x))").unwrap());
     println!("");
 }
 
@@ -55,7 +59,7 @@ fn test_transform() {
         println!("\x1b[32;1m{}\x1b[0m", t);
         transform::pnf::to_pnf(&mut t);
         println!("  +-pnf---> {}", t);
-        transform::skolemization::skolemize(&mut t, false);
+        transform::skolem::skolemize(&mut t, false);
         println!("  +-skole-> {}", t);
         println!("");
     }
@@ -89,6 +93,7 @@ fn test_transform() {
     transform("exists x. forall y. exists z. (P(x, y) and Q(z))");
     transform("forall x. (exists y. (P(x) and Q(y))) and R(x)");
     transform("forall x. exists y. (P(x) and Q(x, y))");
+    transform("forall x. (P(x) <=> forall y. Q(y) and exists z. R(z))");
     println!("");
 }
 

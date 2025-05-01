@@ -1,4 +1,4 @@
-use crate::language::ast::*;
+use crate::fol::ast::*;
 use std::collections::HashSet;
 
 
@@ -53,6 +53,10 @@ impl Formula {
             Formula::Implies(imp) => {
                 vars.extend(imp.formula1.free_vars());
                 vars.extend(imp.formula2.free_vars());
+            },
+            Formula::Iff(iff) => {
+                vars.extend(iff.formula1.free_vars());
+                vars.extend(iff.formula2.free_vars());
             },
             Formula::ForAll(forall) => {
                 let mut inner = forall.formula.free_vars();

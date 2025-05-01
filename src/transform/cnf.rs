@@ -1,6 +1,10 @@
-use crate::language::ast::*;
+use crate::fol::ast::*;
 
 
-pub fn to_nnf(formula: &mut Formula) {
+pub fn to_cnf(formula: &mut Formula) {
     todo!()
+}
+
+
+pub fn to_defcnf(formula: &mut Formula) {
 }

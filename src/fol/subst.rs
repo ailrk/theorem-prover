@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use crate::language::ast::*;
+use crate::fol::ast::*;
 
 
 impl Term {
@@ -46,6 +46,10 @@ impl Formula {
             Formula::Implies(imp) => {
                 imp.formula1.substitute(from.clone(), to);
                 imp.formula2.substitute(from.clone(), to);
+            },
+            Formula::Iff(iff) => {
+                iff.formula1.substitute(from.clone(), to);
+                iff.formula2.substitute(from.clone(), to);
             },
             /* We need to perform alpha-renaming on quantifier cases. e.g For a given substitution [from/to]
              * on formula `forall x. M`, if to.free_vars() contains x, we need to rename x to avoid capture.

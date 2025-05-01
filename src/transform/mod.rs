@@ -1,4 +1,4 @@
 pub mod cnf;
 pub mod pnf;
 pub mod nnf;
-pub mod skolemization;
+pub mod skolem;

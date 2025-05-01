@@ -1,11 +1,12 @@
 use std::iter::Peekable;
 use std::fmt;
-use crate::language::ast::*;
+use crate::fol::ast::*;
 
 
-const KEYWORDS: [&str; 6] = [
+const KEYWORDS: [&str; 7] = [
     "not",
     "=>",
+    "<=>",
     "and",
     "or",
     "forall",
@@ -55,10 +56,10 @@ impl<'a> Lexer<'a> {
                 '.' | ',' | '(' | ')' => {
                     self.push(idx, idx+1);
                 },
-                _ if c.is_alphabetic() || ['=', '>'].contains(&c) => {
+                _ if c.is_alphabetic() || ['=', '>', '<'].contains(&c) => {
                     let mut end = idx + 1;
                     while let Some(&(e, c)) = it.peek() {
-                        if c.is_alphabetic() || ['=', '>'].contains(&c) {
+                        if c.is_alphabetic() || ['=', '>', '<'].contains(&c) {
                             it.next();
                             end = e + 1;
                         }
@@ -299,6 +300,7 @@ fn parse_formula_tail(it: &mut TokenIter) -> Result<Option<ToFormula>, ParserErr
             "and" => parse_tail(it, Formula::and),
             "or" => parse_tail(it, Formula::or),
             "=>" => parse_tail(it, Formula::implies),
+            "<=>" => parse_tail(it, Formula::iff),
             ")" => Ok(None),
             _ => return Err(ParserError::Unexpected(token.to_string()))
         }
