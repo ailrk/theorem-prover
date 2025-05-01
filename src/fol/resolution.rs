@@ -1,4 +1,4 @@
-use crate::language::*;
+use crate::language::ast::*;
 
 
 fn resolve(formula: &mut Formula) {

@@ -1,9 +1,7 @@
 mod language;
-mod parser;
 mod transform;
-mod sequent;
-mod unification;
-mod resolution;
+use language::parser;
+use language::ast;
 
 
 fn test_parse() {
@@ -25,9 +23,9 @@ fn test_parse() {
 fn test_substitution() {
     fn substitute(input: &str, from: &str, to: &str) {
         let mut t = parser::parse(input).unwrap();
-        print!("{}[{}/{}] -> ", t, from, to);
-        let from_var = language::Var::from_string(from.to_string());
-        let to_var = language::Var::from_string(to.to_string());
+        print!("\x1b[32;1m{}\x1b[0m[{}/{}] -> ", t, from, to);
+        let from_var = ast::Var::from_string(from.to_string());
+        let to_var = ast::Var::from_string(to.to_string());
         t.substitute(from_var, &mut to_var.to_term());
         println!("{}", t);
     }
@@ -54,10 +52,9 @@ fn test_substitution() {
 fn test_transform() {
     fn transform(input: &str) {
         let mut t = parser::parse(input).unwrap();
-        println!("{}", t);
+        println!("\x1b[32;1m{}\x1b[0m", t);
         transform::pnf::to_pnf(&mut t);
         println!("  +-pnf---> {}", t);
-        println!("  |");
         transform::skolemization::skolemize(&mut t, false);
         println!("  +-skole-> {}", t);
         println!("");
@@ -94,7 +91,6 @@ fn test_transform() {
     transform("forall x. exists y. (P(x) and Q(x, y))");
     println!("");
 }
-
 
 
 fn main() {

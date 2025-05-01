@@ -1,7 +1,6 @@
 use std::iter::Peekable;
 use std::fmt;
-
-use crate::language::*;
+use crate::language::ast::*;
 
 
 const KEYWORDS: [&str; 6] = [

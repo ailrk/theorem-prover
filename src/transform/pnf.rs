@@ -1,4 +1,4 @@
-use crate::language::*;
+use crate::language::ast::*;
 
 
 /* Prenex normal form. This form guarantees all forall and exists
