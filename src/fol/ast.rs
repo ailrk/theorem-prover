@@ -8,10 +8,11 @@ use std::marker::PhantomData;
 #[derive(Debug, Clone)] pub struct Pnf;
 #[derive(Debug, Clone)] pub struct Skolemized;
 #[derive(Debug, Clone)] pub struct Grounded;
+#[derive(Debug, Clone)] pub struct Cnf;
 
 
 #[derive(Hash, PartialEq, Eq, Clone)]
-pub enum Formula<S> {
+pub enum Formula<S: 'static> {
     Pred(Pred<S>),
     Not(Not<S>),
     And(And<S>),
@@ -54,14 +55,14 @@ pub struct Pred<S> {
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct Not<S> {
+pub struct Not<S: 'static> {
     pub formula: Box<Formula<S>>,
     _marker: std::marker::PhantomData<S>,
 }
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct And<S> {
+pub struct And<S: 'static> {
     pub formula1: Box<Formula<S>>,
     pub formula2: Box<Formula<S>>,
     _marker: std::marker::PhantomData<S>,
@@ -69,7 +70,7 @@ pub struct And<S> {
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct Or<S> {
+pub struct Or<S: 'static> {
     pub formula1: Box<Formula<S>>,
     pub formula2: Box<Formula<S>>,
     _marker: std::marker::PhantomData<S>,
@@ -77,7 +78,7 @@ pub struct Or<S> {
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct Implies<S> {
+pub struct Implies<S: 'static> {
     pub formula1: Box<Formula<S>>,
     pub formula2: Box<Formula<S>>,
     _marker: std::marker::PhantomData<S>,
@@ -85,7 +86,7 @@ pub struct Implies<S> {
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct Iff<S> {
+pub struct Iff<S: 'static> {
     pub formula1: Box<Formula<S>>,
     pub formula2: Box<Formula<S>>,
     _marker: std::marker::PhantomData<S>,
@@ -93,7 +94,7 @@ pub struct Iff<S> {
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct ForAll<S> {
+pub struct ForAll<S: 'static> {
     pub var: Var,
     pub formula: Box<Formula<S>>,
     _marker: std::marker::PhantomData<S>,
@@ -101,10 +102,29 @@ pub struct ForAll<S> {
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct Exists<S> {
+pub struct Exists<S: 'static> {
     pub var: Var,
     pub formula: Box<Formula<S>>,
     _marker: std::marker::PhantomData<S>,
+}
+
+
+// Treat grounded predicate as an unique atom
+impl<S> Pred<S> {
+    pub fn unique(&self) -> String {
+        fn term_name(term: &Term) -> String {
+            match term {
+                Term::Var(v) => v.name.clone(),
+                Term::Func(f) => {
+                    let inner = f.terms.iter().map(term_name).collect::<Vec<_>>().join("_");
+                    format!("{}{}", f.name, if inner.is_empty() { "".to_string() } else { format!("_{}", inner) })
+                }
+                Term::Dummy => "dummy".to_string(),
+            }
+        }
+        let args = self.terms.iter().map(term_name).collect::<Vec<_>>().join("_");
+        format!("{}_{}", self.name, args)
+    }
 }
 
 
@@ -233,14 +253,14 @@ impl<S> Formula<S> {
 }
 
 
-impl<S> fmt::Debug for Formula<S> {
+impl<S: 'static> fmt::Debug for Formula<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.fmt_with_indent(f, 0) // Start with indentation level 0
     }
 }
 
 
-impl<S> fmt::Display for Formula<S> {
+impl<S: 'static> fmt::Display for Formula<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.display(f)
     }

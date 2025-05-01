@@ -69,18 +69,28 @@ fn test_transform() {
     println!("Transform:");
     transform("P(x)");
     transform("forall a. P(f(a))");
+    println!("Push negations:");
+    transform("forall a. not (P(a) and P(b))");
+    transform("forall a. not (P(a) or P(b))");
+    transform("not (forall x. P(x))");
+    transform("not (exists x. P(x))");
+    transform("not (forall x. exists y. (P(x) and Q(y)))");
+    println!("Eliminate arrows:");
+    transform("forall a. forall b. P(a) <=> P(b)");
+    transform("forall x. P(x) => Q(x)");
+    println!("Skolemization:");
+    transform("forall x. exists y. forall z. exists w. P(x,y,z,w)");
+    transform("exists x. (forall y. (P(x, y) and Q(x)))");
+    transform("forall x. exists y. exists z. (P(x) and Q(y) and R(z))");
+    transform("forall x. (P(x) <=> forall y. Q(y) and exists z. R(z))");
+    println!("Misc:");
     transform("forall a. P(a) and (forall b. P(b))");
-    transform("forall x. (P(x) => Q(x))");
     transform("forall x. (exists y. (P(x) => Q(y)))");
     transform("forall x. P(x) and forall y. Q(y)");
     transform("exists x. P(x) or exists y. Q(y)");
     transform("forall x. P(x) => exists y. Q(y)");
-    transform("not (forall x. P(x))");
-    transform("not (exists x. P(x))");
-    transform("not (forall x. exists y. (P(x) and Q(y)))");
     transform("forall x. (P(x) => forall y. (Q(y) => exists z. R(z)))");
     transform("forall x. forall y. forall z. P(f(x)) and P(y) and P(z)");
-    transform("forall x. exists y. forall z. exists w. P(x,y,z,w)");
     transform("exists x. exists y. P(x, y)");
     transform("exists x. forall y. P(x) and Q(y)");
     transform("forall x. exists y. P(x, y) and Q(y)");
@@ -89,14 +99,11 @@ fn test_transform() {
     transform("forall x. (exists y. (P(x) => Q(y))) and R(x)");
     transform("exists x. exists y. forall z. P(x, y, z) and Q(x, y)");
     transform("forall x. (exists y. (P(x) => exists z. Q(y, z)))");
-    transform("exists x. (forall y. (P(x, y) and Q(x)))");
-    transform("forall x. exists y. exists z. (P(x) and Q(y) and R(z))");
     transform("not (exists x. exists y. P(x, y))");
     transform("forall x. (exists y. (P(x, y) => Q(y)))");
     transform("exists x. forall y. exists z. (P(x, y) and Q(z))");
     transform("forall x. (exists y. (P(x) and Q(y))) and R(x)");
     transform("forall x. exists y. (P(x) and Q(x, y))");
-    transform("forall x. (P(x) <=> forall y. Q(y) and exists z. R(z))");
     println!("");
 }
 

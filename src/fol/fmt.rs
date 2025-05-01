@@ -32,12 +32,16 @@ impl Term {
 }
 
 
-impl<S> Formula<S> {
+impl<S: 'static> Formula<S> {
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
         let indent_str = "  ".repeat(indent);
         match self {
             Formula::Pred(pred) => {
-                write!(f, "{}(Pred {:?} {:?}", indent_str, pred.name, pred.terms)?;
+                if std::any::TypeId::of::<S>() == std::any::TypeId::of::<Grounded>() {
+                    write!(f, "{}{}", indent_str, pred.unique())?;
+                } else {
+                    write!(f, "{}(Pred {:?} {:?}", indent_str, pred.name, pred.terms)?;
+                }
             },
             Formula::Not(not) => {
                 write!(f, "{}(Not {:?}", indent_str, not.formula)?;
@@ -87,14 +91,18 @@ impl<S> Formula<S> {
     pub fn display(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Formula::Pred(pred) => {
-                write!(f, "{}(", pred.name)?;
-                for (idx, param) in pred.terms.iter().enumerate() {
-                    write!(f, "{}", param)?;
-                    if idx < pred.terms.len() - 1 {
-                        write!(f, ",")?;
+                if std::any::TypeId::of::<S>() == std::any::TypeId::of::<Grounded>() {
+                    write!(f, "{}", pred.unique())
+                } else {
+                    write!(f, "{}(", pred.name)?;
+                    for (idx, param) in pred.terms.iter().enumerate() {
+                        write!(f, "{}", param)?;
+                        if idx < pred.terms.len() - 1 {
+                            write!(f, ",")?;
+                        }
                     }
+                    write!(f, ")")
                 }
-                write!(f, ")")
             },
             Formula::Not(not) => {
                 write!(f, "¬{}", not.formula)
@@ -109,7 +117,7 @@ impl<S> Formula<S> {
                 write!(f, "({} → {})", imp.formula1, imp.formula2)
             },
             Formula::Iff(iff) => {
-                write!(f, "({} ⇔ {})", iff.formula1, iff.formula2)
+                write!(f, "({} ⇔  {})", iff.formula1, iff.formula2)
             },
             Formula::ForAll(forall) => {
                 write!(f, "(∀{}.{})", forall.var.to_term(), forall.formula)

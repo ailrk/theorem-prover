@@ -3,7 +3,7 @@ use std::fmt::{self};
 
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct Sequent<S> {
+pub struct Sequent<S: 'static> {
     pub left: Vec<Formula<S>>,
     pub right: Vec<Formula<S>>,
     pub depth: usize
