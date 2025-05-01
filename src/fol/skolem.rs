@@ -45,8 +45,8 @@ fn skolemize(mut formula: Formula<Pnf> ) -> Formula<Skolemized> {
         match formula {
             Formula::Exists(mut exists) => {
                 let var = exists.var.clone();
-                let mut skolem = fresh_skolem(&uvars, &mut state);
-                first_non_quantified(&mut exists.formula).substitute(var, &mut skolem);
+                let skolem = fresh_skolem(&uvars, &mut state);
+                first_non_quantified(&mut exists.formula).substitute(var, skolem);
                 formula = *exists.formula;
             },
             Formula::ForAll(forall) => {
@@ -63,15 +63,6 @@ fn skolemize(mut formula: Formula<Pnf> ) -> Formula<Skolemized> {
         formula = Formula::forall(Var::from_string(var), rest);
     }
     formula.cast()
-}
-
-
-fn first_existential(formula: &mut Formula<Raw>) -> &mut Formula<Raw> {
-    match formula {
-        Formula::ForAll(forall) => first_existential(&mut forall.formula),
-        Formula::Exists(_) => formula,
-        _ => unreachable!("Not in PNF form")
-    }
 }
 
 
@@ -98,12 +89,14 @@ fn fresh_skolem(uvars: &[String], state: &mut SkolemState) -> Term {
 
 
 fn collect_universal_vars(formula: &Formula<Pnf>, out: &mut Vec<String>) {
-    debug_assert!(matches!(formula, Formula::ForAll(_) | Formula::Exists(_) | _), "Expected PNF formula");
     match formula {
         Formula::ForAll(forall) => {
             out.push(forall.var.name.clone());
             collect_universal_vars(&forall.formula, out);
         },
+        Formula::Exists(exists) => {
+            collect_universal_vars(&exists.formula, out);
+        }
         _ => {}
     };
 }

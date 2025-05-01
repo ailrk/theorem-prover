@@ -1,8 +1,7 @@
 use crate::fol::ast::*;
 
 
-
-impl Formula<Raw> {
+impl Formula<Nnf> {
     pub fn to_pnf(self) -> Formula<Pnf> {
         to_pnf(self)
     }
@@ -15,10 +14,10 @@ impl Formula<Raw> {
  * becomes
  * `∀x. ∃y. (P(x) → Q(x, y))`
  * */
-pub fn to_pnf(formula: Formula<Raw>) -> Formula<Pnf> {
+pub fn to_pnf(formula: Formula<Nnf>) -> Formula<Pnf> {
     match formula {
         Formula::ForAll(forall) => { Formula::forall(forall.var, to_pnf(*forall.formula)) },
-        Formula::Exists(exists) => { Formula::forall(exists.var, to_pnf(*exists.formula)) },
+        Formula::Exists(exists) => { Formula::exists(exists.var, to_pnf(*exists.formula)) },
         Formula::Implies(imp) => pnf_binop(Formula::implies, *imp.formula1, *imp.formula2),
         Formula::Iff(iff) => pnf_binop(Formula::iff, *iff.formula1, *iff.formula2),
         Formula::And(and) => pnf_binop(Formula::and, *and.formula1, *and.formula2),
@@ -49,7 +48,7 @@ fn merge_pnfs<'a>(formula1: &'a mut Formula<Pnf>, formula2: &'a mut Formula<Pnf>
 }
 
 
-fn pnf_unop(unop: impl Fn(Formula<Pnf>) -> Formula<Pnf>, child: Formula<Raw>) -> Formula<Pnf> {
+fn pnf_unop(unop: impl Fn(Formula<Pnf>) -> Formula<Pnf>, child: Formula<Nnf>) -> Formula<Pnf> {
     let mut child_pnfed = to_pnf(child);
     let non_quantified = first_non_quantified(&mut child_pnfed);
     *non_quantified = unop(std::mem::take(non_quantified));
@@ -57,7 +56,7 @@ fn pnf_unop(unop: impl Fn(Formula<Pnf>) -> Formula<Pnf>, child: Formula<Raw>) ->
 }
 
 
-fn pnf_binop(binop: impl Fn(Formula<Pnf>, Formula<Pnf>) -> Formula<Pnf>, left: Formula<Raw>, right: Formula<Raw>) -> Formula<Pnf> {
+fn pnf_binop(binop: impl Fn(Formula<Pnf>, Formula<Pnf>) -> Formula<Pnf>, left: Formula<Nnf>, right: Formula<Nnf>) -> Formula<Pnf> {
     let mut left_pnfed = to_pnf(left);
     let mut right_pnfed = to_pnf(right);
     let new_body = binop(

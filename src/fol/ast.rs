@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 
 #[derive(Debug, Clone)] pub struct Raw;
+#[derive(Debug, Clone)] pub struct Nnf;
 #[derive(Debug, Clone)] pub struct Pnf;
 #[derive(Debug, Clone)] pub struct Skolemized;
 #[derive(Debug, Clone)] pub struct Grounded;

@@ -29,7 +29,7 @@ fn test_substitution() {
         print!("\x1b[32;1m{}\x1b[0m[{}/{}] -> ", t, from, to);
         let from_var = ast::Var::from_string(from.to_string());
         let to_var = ast::Var::from_string(to.to_string());
-        t.substitute(from_var, &mut to_var.to_term());
+        t.substitute(from_var, to_var.to_term());
         println!("{}", t);
     }
     println!("Substitution:");
@@ -56,6 +56,8 @@ fn test_transform() {
     fn transform(input: &str) {
         let t = parser::parse(input).unwrap();
         println!("\x1b[32;1m{}\x1b[0m", t);
+        let t = t.to_nnf();
+        println!("  +-nnf---> {}", t);
         let t = t.to_pnf();
         println!("  +-pnf---> {}", t);
         let t = t.skolemize();

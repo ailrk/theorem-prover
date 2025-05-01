@@ -3,19 +3,19 @@ use crate::fol::ast::*;
 
 
 impl Term {
-    pub fn substitute(&mut self, from: Var, to: &mut Term) {
+    pub fn substitute(&mut self, from: Var, to: Term) {
         let taken = std::mem::take(self);
         match taken {
             Term::Var(ref var) => {
                 if *var == from {
-                    *self = std::mem::take(to)
+                    *self = to
                 } else {
                     *self = taken
                 }
             },
             Term::Func(mut func) => {
                 for term in func.terms.iter_mut() {
-                    term.substitute(from.clone(), to)
+                    term.substitute(from.clone(), to.clone())
                 }
                 *self = Term::func( &func.name, func.terms)
             }
@@ -27,28 +27,28 @@ impl Term {
 
 impl<S> Formula<S> {
     /* Replace var with term. */
-    pub fn substitute(&mut self, from: Var, to: &mut Term) {
+    pub fn substitute(&mut self, from: Var, to: Term) {
         match self {
             Formula::Pred(pred) => {
                 for term in pred.terms.iter_mut() {
-                    term.substitute(from.clone(), to);
+                    term.substitute(from.clone(), to.clone());
                 }
             },
             Formula::Not(not) => not.formula.substitute(from.clone(), to),
             Formula::And(and) => {
-                and.formula1.substitute(from.clone(), to);
+                and.formula1.substitute(from.clone(), to.clone());
                 and.formula2.substitute(from.clone(), to);
             }
             Formula::Or(or) => {
-                or.formula1.substitute(from.clone(), to);
+                or.formula1.substitute(from.clone(), to.clone());
                 or.formula2.substitute(from.clone(), to);
             },
             Formula::Implies(imp) => {
-                imp.formula1.substitute(from.clone(), to);
+                imp.formula1.substitute(from.clone(), to.clone());
                 imp.formula2.substitute(from.clone(), to);
             },
             Formula::Iff(iff) => {
-                iff.formula1.substitute(from.clone(), to);
+                iff.formula1.substitute(from.clone(), to.clone());
                 iff.formula2.substitute(from.clone(), to);
             },
             /* We need to perform alpha-renaming on quantifier cases. e.g For a given substitution [from/to]
