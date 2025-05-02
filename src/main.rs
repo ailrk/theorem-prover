@@ -1,6 +1,7 @@
 mod sat;
-mod fol;
 mod prover;
+mod fol;
+use fol::ast::Cnf;
 use fol::ast::Grounded;
 use fol::parser;
 use fol::ast;
@@ -69,6 +70,8 @@ fn test_transform() {
         println!("  +-ground-> {}", t);
         let t = t.to_cnf().cast::<Grounded>();
         println!("  +-cnf-> {}", t);
+        let cnfset = sat::set::CNFSet::from_formula(t.cast::<Cnf>());
+        println!("  +-cnfset-> {:?}", cnfset);
         println!("");
     }
     println!("Transform:");

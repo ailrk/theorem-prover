@@ -2,21 +2,36 @@ use crate::fol::ast::*;
 
 
 impl Formula<Grounded> {
-    pub fn to_cnf(self) -> Formula<Cnf> { to_cnf(self) }
-    pub fn to_defcnf(self) -> Formula<Cnf> { to_defcnf(self) }
+    pub fn to_cnf(self) -> Formula<Cnf> { to_cnf(self).cast() }
+    pub fn to_defcnf(self) -> Formula<Cnf> { to_defcnf(self).cast() }
 }
 
 
-fn to_cnf(formula: Formula<Grounded>) -> Formula<Cnf> {
-    distribute_or(formula).cast()
+/*  p ∧ q => cnf(p) ∧ cnf(q)
+ *  p ∨ q => distribute_or(cnf(p) ∨ cnf(q))
+ *  Because it's already grounded this covers all cases.
+ */
+fn to_cnf(formula: Formula<Grounded>) -> Formula<Grounded> {
+    match formula {
+        Formula::And( And { formula1, formula2, .. }) => {
+            Formula::and(to_cnf(*formula1), to_cnf(*formula2))
+        },
+        Formula::Or(Or { formula1, formula2, .. }) => {
+            distribute_or(Formula::or(to_cnf(*formula1), to_cnf(*formula2))).cast()
+        },
+        _ => formula
+    }
 }
 
 
-fn to_defcnf(formula: Formula<Grounded>) -> Formula<Cnf> {
+fn to_defcnf(formula: Formula<Grounded>) -> Formula<Grounded> {
     todo!()
 }
 
 
+/* p ∨ (q ∧ r) ⇔  (p ∨ q) ∧  (p ∨ r)
+ * (p ∧ q) ∨ r ⇔  (p ∨ r) ∧ (q ∨ r).
+ */
 fn distribute_or(formula: Formula<Grounded>) -> Formula<Grounded> {
     match formula {
         Formula::Or(Or { formula1: mut o1, formula2: mut o2, .. }) => {
