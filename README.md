@@ -1,4 +1,12 @@
 # A FOL Theorem prover
 
-https://www.cip.ifi.lmu.de/~sprinz/sprinz_2021_unification.pdf
-https://www.cs.utexas.edu/~isil/cs389L/lecture8-3up.pdf
+- [x] First order logic
+- [x] NNF
+- [x] Skolemization
+- [x] PNF
+- [x] CNF
+- [ ] Definitional CNF
+- [ ] DP
+- [ ] DPLL
+- [ ] WALKSAT
+- [ ] Sequent
