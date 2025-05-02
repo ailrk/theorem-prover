@@ -2,7 +2,7 @@ use crate::fol::ast::*;
 use std::collections::HashSet;
 
 
-#[derive(Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum Literal {
     Pos(String),
     Neg(String)
@@ -11,20 +11,20 @@ pub enum Literal {
 
 /* Literal for set of set representation */
 impl Literal {
-    fn pos(s: String) -> Self { Literal::Pos(s) }
-    fn neg(s: String) -> Self { Literal::Neg(s) }
+    pub fn pos(s: String) -> Self { Literal::Pos(s) }
+    pub fn neg(s: String) -> Self { Literal::Neg(s) }
 
-    fn var_name(&self) -> &str {
+    pub fn var_name(&self) -> &str {
         match self {
             Literal::Pos(s) | Literal::Neg(s) => s,
         }
     }
 
-    fn is_negated(&self) -> bool {
+    pub fn is_negated(&self) -> bool {
         matches!(self, Literal::Neg(_))
     }
 
-    fn negate(&self) -> Self {
+    pub fn negate(&self) -> Self {
         match self {
             Literal::Pos(s) => Literal::Neg(s.clone()),
             Literal::Neg(s) => Literal::Pos(s.clone()),
@@ -35,7 +35,7 @@ impl Literal {
 
 /* Set of set representation of CNF */
 #[derive(Debug)]
-pub struct CNFSet(Vec<HashSet<Literal>>);
+pub struct CNFSet(pub Vec<HashSet<Literal>>);
 
 
 impl CNFSet {
@@ -76,7 +76,6 @@ fn collect_clauses(formula: Formula<Cnf>, clauses: &mut Vec<HashSet<Literal>>) {
         _ => panic!("Expect CNF, got {:?}", formula)
     }
 }
-
 
 
 fn collect_disjunctives(formula: Formula<Cnf>, set: &mut HashSet<Literal>) {
