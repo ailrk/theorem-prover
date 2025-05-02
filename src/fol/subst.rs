@@ -4,7 +4,7 @@ use crate::fol::ast::*;
 
 impl Term {
     pub fn substitute(&mut self, from: Var, to: Term) {
-        let taken = std::mem::take(self);
+        let taken = self.take();
         match taken {
             Term::Var(ref var) => {
                 if *var == from {
@@ -57,7 +57,7 @@ impl<S> Formula<S> {
              * Then we can perform the original substitution safely.
              */
             Formula::ForAll(_) => {
-                let mut taken = std::mem::take(self);
+                let mut taken = self.take();
                 if let Formula::ForAll(ref forall) = taken {
                     if to.free_vars().contains(&forall.var) {
                         taken.alpha_rename();
@@ -69,10 +69,10 @@ impl<S> Formula<S> {
                         forall.formula.substitute(from, to);
                     }
                 }
-                *self = std::mem::take(&mut taken)
+                *self = (&mut taken).take()
             },
             Formula::Exists(_) => {
-                let mut taken = std::mem::take(self);
+                let mut taken = self.take();
                 if let Formula::Exists(ref exists) = taken {
                     if to.free_vars().contains(&exists.var) {
                         taken.alpha_rename();
@@ -84,7 +84,7 @@ impl<S> Formula<S> {
                         exists.formula.substitute(from, to);
                     }
                 }
-                *self = std::mem::take(&mut taken)
+                *self = (&mut taken).take()
             },
             Formula::Dummy => {},
         }

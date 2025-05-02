@@ -149,6 +149,10 @@ impl Term {
     pub fn func(name: &str, terms: Vec<Term>) -> Term {
         Term::Func(Func { name: name.to_string(), terms })
     }
+
+    pub fn take(&mut self) -> Self {
+        std::mem::take(self)
+    }
 }
 
 
@@ -235,6 +239,10 @@ impl<S> Formula<S> {
             formula: Box::new(formula),
             _marker: PhantomData
         })
+    }
+
+    pub fn take(&mut self) -> Self {
+        std::mem::take(self)
     }
 
     pub fn cast<T>(self) -> Formula<T> {

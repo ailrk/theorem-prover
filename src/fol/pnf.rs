@@ -42,7 +42,7 @@ fn first_non_quantified(formula: &mut Formula<Pnf>) -> &mut Formula<Pnf> {
 
 fn merge_pnfs<'a>(formula1: &'a mut Formula<Pnf>, formula2: &'a mut Formula<Pnf>)  -> &'a mut Formula<Pnf> {
     if let non_quantified @ Formula::Dummy = first_non_quantified(formula1) {
-        *non_quantified = std::mem::take(formula2);
+        *non_quantified = formula2.take();
         formula1
     } else {
         unreachable!("Expected Dummy at quantifier tail when merging PNFs; got nested formula")
@@ -53,7 +53,7 @@ fn merge_pnfs<'a>(formula1: &'a mut Formula<Pnf>, formula2: &'a mut Formula<Pnf>
 fn pnf_unop(unop: impl Fn(Formula<Pnf>) -> Formula<Pnf>, child: Formula<Nnf>) -> Formula<Pnf> {
     let mut child_pnfed = to_pnf(child);
     let non_quantified = first_non_quantified(&mut child_pnfed);
-    *non_quantified = unop(std::mem::take(non_quantified));
+    *non_quantified = unop(non_quantified.take());
     child_pnfed
 }
 
@@ -95,10 +95,10 @@ fn pnf_binop(binop: impl Fn(Formula<Pnf>, Formula<Pnf>) -> Formula<Pnf>, left: F
     }
 
     let new_body = binop(
-        std::mem::take(first_non_quantified(&mut left_pnfed)),
-        std::mem::take(first_non_quantified(&mut right_pnfed)));
+        first_non_quantified(&mut left_pnfed).take(),
+        first_non_quantified(&mut right_pnfed).take());
     let quantified = merge_pnfs(&mut left_pnfed, &mut right_pnfed);
     let non_quantified = first_non_quantified(quantified);
     *non_quantified = new_body;
-    std::mem::take(quantified)
+    quantified.take()
 }
