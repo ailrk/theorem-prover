@@ -1,6 +1,7 @@
 mod sat;
 mod fol;
 mod prover;
+use fol::ast::Grounded;
 use fol::parser;
 use fol::ast;
 
@@ -66,6 +67,8 @@ fn test_transform() {
         println!("  +-skole-> {}", t);
         let t = t.ground();
         println!("  +-ground-> {}", t);
+        let t = t.to_cnf().cast::<Grounded>();
+        println!("  +-cnf-> {}", t);
         println!("");
     }
     println!("Transform:");

@@ -116,7 +116,7 @@ impl<S> Pred<S> {
             match term {
                 Term::Var(v) => v.name.clone(),
                 Term::Func(f) => {
-                    let inner = f.terms.iter().map(term_name).collect::<Vec<_>>().join("_");
+                    let inner = f.terms.iter().map(term_name).collect::<Vec<_>>().join("");
                     format!("{}{}", f.name, if inner.is_empty() { "".to_string() } else { format!("_{}", inner) })
                 }
                 Term::Dummy => "dummy".to_string(),
