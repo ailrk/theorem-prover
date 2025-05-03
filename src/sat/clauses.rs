@@ -35,14 +35,14 @@ impl Literal {
 
 /* Set of set representation of CNF */
 #[derive(Debug)]
-pub struct CNFSet(pub Vec<HashSet<Literal>>);
+pub struct Clauses(pub Vec<HashSet<Literal>>);
 
 
-impl CNFSet {
+impl Clauses {
     pub fn from_formula(formla: Formula<Cnf>) -> Self {
         let mut result = Vec::new();
         collect_clauses(formla, &mut result);
-        CNFSet(result)
+        Clauses(result)
     }
 }
 

@@ -1,3 +1,4 @@
 pub mod dpll;
 pub mod dp;
-pub mod set;
+pub mod clauses;
+pub mod dimacs;

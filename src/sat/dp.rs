@@ -1,37 +1,37 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::sat::set::*;
+use crate::sat::clauses::*;
 
 
-pub fn satisfiable_dp(mut set: CNFSet) -> bool {
+pub fn satisfiable_dp(mut clauses: Clauses) -> bool {
     loop {
-        if set.0.is_empty() {
+        if clauses.0.is_empty() {
             return true;
-        } else if set.0.iter().any(|clause| clause.is_empty()) {
+        } else if clauses.0.iter().any(|clause| clause.is_empty()) {
             return false;
         } else {
-            match one_literal_rule(set) {
+            match one_literal_rule(clauses) {
                 Ok(s) => {
-                    set = s; continue;
+                    clauses = s; continue;
                 },
                 Err(s) => {
-                    set = s;
+                    clauses = s;
                 }
             };
-            match affirmative_negative_rule(set) {
+            match affirmative_negative_rule(clauses) {
                 Ok(s) => {
-                    set = s; continue;
+                    clauses = s; continue;
                 },
                 Err(s) => {
-                    set = s;
+                    clauses = s;
                 }
             }
-            match resolution_rule(set) {
+            match resolution_rule(clauses) {
                 Ok(s) => {
-                    set = s;
+                    clauses = s;
                 },
                 Err(s) => {
-                    set = s;
+                    clauses = s;
                 }
             }
         }
@@ -43,9 +43,9 @@ pub fn satisfiable_dp(mut set: CNFSet) -> bool {
  * - Remove ¬P from other clauses.
  * - Remove clauses contains P including itself.
  * */
-fn one_literal_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
+fn one_literal_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
     let mut value = None;
-    for clause in set.0.iter() {
+    for clause in clauses.0.iter() {
         if clause.len() == 1 {
             value = clause.iter().next().cloned();
             break
@@ -54,25 +54,25 @@ fn one_literal_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
 
     if let Some(unit) = value {
         let neg = unit.negate();
-        for clause in set.0.iter_mut() {
+        for clause in clauses.0.iter_mut() {
             if clause.contains(&neg) {
                 clause.remove(&neg);
             }
         }
-        set.0.retain(|c| !c.contains(&unit));
+        clauses.0.retain(|c| !c.contains(&unit));
     } else {
-        return Err(set)
+        return Err(clauses)
     }
-    Ok(set)
+    Ok(clauses)
 }
 
 
 /* If a literal occurs only positively or negatively, we can remove all clauses contain them
  * while preserving satisfiability. */
-fn affirmative_negative_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
+fn affirmative_negative_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
     const POS: u8 = 0b01; const NEG: u8 = 0b10;
     let mut occurrences: HashMap<String, u8> = HashMap::new();
-    for clause in set.0.iter() {
+    for clause in clauses.0.iter() {
         for literal in clause.iter() {
             let k = literal.var_name().to_string();
             let mask = if literal.is_negated() { NEG } else { POS };
@@ -87,8 +87,8 @@ fn affirmative_negative_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
         .filter(|(_, o)| { *o == POS || *o == NEG })
         .map(|(k, _)| k)
         .collect::<Vec<_>>();
-    if pure_occurs.len() == 0 { return Err(set) }
-    set.0.retain(|c| {
+    if pure_occurs.len() == 0 { return Err(clauses) }
+    clauses.0.retain(|c| {
         let mut keep = false;
         for pure in pure_occurs.iter() {
             keep = keep
@@ -97,7 +97,7 @@ fn affirmative_negative_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
         }
         !keep
     });
-    Ok(set)
+    Ok(clauses)
 }
 
 
@@ -121,9 +121,9 @@ fn affirmative_negative_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
  * DP will simply try to iterate through all symbols in the cnf and try to resolve them in
  * turn. There are better way to pick literal in more optimized algorithms.
  * */
-fn resolution_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
+fn resolution_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
     let mut occurrences = HashMap::new();
-    for clause in set.0.iter() {
+    for clause in clauses.0.iter() {
         for literal in clause.iter() {
             if let Some(v) = occurrences.get_mut(literal.var_name()) {
                 *v += 1;
@@ -141,7 +141,7 @@ fn resolution_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
         let n = Literal::neg(symbol.clone());
         let mut pos = Vec::new();
         let mut neg = Vec::new();
-        for (idx, clause) in set.0.iter_mut().enumerate() {
+        for (idx, clause) in clauses.0.iter_mut().enumerate() {
             if clause.contains(&p) {
                 clause.remove(&p);
                 pos.push(idx);
@@ -152,14 +152,14 @@ fn resolution_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
         }
         for pidx in pos.iter_mut() {
             for nidx in neg.iter() {
-                let pclause = &set.0[*pidx];
-                let nclause = &set.0[*nidx];
+                let pclause = &clauses.0[*pidx];
+                let nclause = &clauses.0[*nidx];
                 let resolvent = pclause.union(nclause).cloned().collect::<HashSet<_>>();
                 resolvents.push(resolvent);
             }
         }
         let to_remove = pos.into_iter().chain(neg).collect::<HashSet<_>>();
-        set = CNFSet(set
+        clauses = Clauses(clauses
             .0
             .into_iter()
             .enumerate()
@@ -169,9 +169,9 @@ fn resolution_rule(mut set: CNFSet) -> Result<CNFSet, CNFSet> {
     }
 
     if resolvents.is_empty() {
-        return Err (set)
+        return Err (clauses)
     }
 
-    set.0.append(&mut resolvents);
-    Ok(set)
+    clauses.0.append(&mut resolvents);
+    Ok(clauses)
 }
