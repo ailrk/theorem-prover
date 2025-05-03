@@ -1,4 +1,9 @@
 extern crate theorem_prover;
+extern crate flate2;
+extern crate tar;
+extern crate tempfile;
+use theorem_prover::fol::ast::Formula;
+use theorem_prover::fol::ast::Raw;
 use theorem_prover::fol::parser;
 use theorem_prover::fol::ast;
 use theorem_prover::fol::ast::Cnf;
@@ -53,7 +58,7 @@ fn test_substitution() {
 }
 
 
-fn pipeline(input: &str, satisfiable: bool) {
+fn to_cnf(input: &str) -> Formula<Cnf> {
     let t = parser::parse(input).unwrap();
     println!("\x1b[32;1m{}\x1b[0m", t);
     let t = t.to_nnf();
@@ -65,67 +70,94 @@ fn pipeline(input: &str, satisfiable: bool) {
     let t = t.ground();
     println!("  +-ground-> {}", t);
     let t = t.to_cnf().cast::<Grounded>();
-    println!("  +-cnf-> {}", t);
-    let cnfset = sat::set::CNFSet::from_formula(t.cast::<Cnf>());
-    println!("  +-cnfset-> {:?}", cnfset);
-    let sat = sat::dp::satisfiable_dp(cnfset);
-    println!("  +-sat---> {:?}", sat);
-    assert_eq!(sat, satisfiable);
+    println!("  +-cnf----> {}", t);
+    t.cast::<Cnf>()
+}
+
+
+fn satisfiable(input: &str, is_satisfiable: bool) {
+    let t = to_cnf(input);
+    let clauses = sat::clauses::Clauses::from_formula(t.cast::<Cnf>());
+    println!("  +-clauses-> {:?}", clauses);
+    let sat = sat::dp::satisfiable_dp(clauses);
+    println!("  +-sat-----> {:?}, should be {:?}", sat, is_satisfiable);
+    assert_eq!(sat, is_satisfiable);
+    println!("");
+}
+
+
+fn tautology(input: &str, is_valid: bool) {
+    let t = Formula::not(to_cnf(input)).cast::<Raw>().to_nnf().to_pnf().skolemize().ground().to_cnf();
+    let clauses = sat::clauses::Clauses::from_formula(t.cast::<Cnf>());
+    println!("  +-clauses-> {:?}", clauses);
+    let valid = !sat::dp::satisfiable_dp(clauses);
+    println!("  +-taut----> {:?}, should be {:?}", valid, is_valid);
+    assert_eq!(valid, is_valid);
     println!("");
 }
 
 
 #[test]
-fn test_pipeline_satisfiable() {
-    pipeline("P(x)", true);
-    pipeline("(P(x) or not Q(x)) and (P(x) or not Q(x) or R(x)) and (not R(x))", true);
-    pipeline("P(x) or Q(x)", true);
-    pipeline("(P(x) or Q(x)) and (not P(x) or R(x))", true);
-    pipeline("(P(x) or Q(x)) and (not Q(x) or R(x)) and (not R(x) or S(x))", true);
-    pipeline("(P(x) or Q(x)) and (P(x) or not Q(x))", true);
-    pipeline("(P(x)) and (Q(x)) and (R(x))", true);
-    pipeline("forall a. P(f(a))", true);
-    pipeline("forall a. not (P(a) and P(b))", true);
-    pipeline("forall a. not (P(a) or P(b))", true);
-    pipeline("not (forall x. P(x))", true);
-    pipeline("not (exists x. P(x))", true);
-    pipeline("not (forall x. exists y. (P(x) and Q(y)))", true);
-    pipeline("forall a. forall b. P(a) <=> P(b)", true);
-    pipeline("forall x. P(x) => Q(x)", true);
-    pipeline("forall x. exists y. forall z. exists w. P(x,y,z,w)", true);
-    pipeline("exists x. (forall y. (P(x, y) and Q(x)))", true);
-    pipeline("forall x. exists y. exists z. (P(x) and Q(y) and R(z))", true);
-    pipeline("forall x. (P(x) <=> forall y. Q(y) and exists z. R(z))", true);
-    pipeline("forall a. P(a) and (forall b. P(b))", true);
-    pipeline("forall x. (exists y. (P(x) => Q(y)))", true);
-    pipeline("forall x. P(x) and forall y. Q(y)", true);
-    pipeline("exists x. P(x) or exists y. Q(y)", true);
-    pipeline("forall x. P(x) => exists y. Q(y)", true);
-    pipeline("forall x. (P(x) => forall y. (Q(y) => exists z. R(z)))", true);
-    pipeline("forall x. forall y. forall z. P(f(x)) and P(y) and P(z)", true);
-    pipeline("exists x. exists y. P(x, y)", true);
-    pipeline("exists x. forall y. P(x) and Q(y)", true);
-    pipeline("forall x. exists y. P(x, y) and Q(y)", true);
-    pipeline("exists x. forall y. exists z. P(x, y, z)", true);
-    pipeline("forall x. exists y. (P(x) => Q(y))", true);
-    pipeline("forall x. (exists y. (P(x) => Q(y))) and R(x)", true);
-    pipeline("exists x. exists y. forall z. P(x, y, z) and Q(x, y)", true);
-    pipeline("forall x. (exists y. (P(x) => exists z. Q(y, z)))", true);
-    pipeline("not (exists x. exists y. P(x, y))", true);
-    pipeline("forall x. (exists y. (P(x, y) => Q(y)))", true);
-    pipeline("exists x. forall y. exists z. (P(x, y) and Q(z))", true);
-    pipeline("forall x. (exists y. (P(x) and Q(y))) and R(x)", true);
-    pipeline("forall x. (P(x) and exists y. Q(x, y)) <=> not (P(x))", true);
+fn test_tautologies() {
+    tautology("P(x) or not P(x)", true);  // classical tautology
+    tautology("P(x) => P(x)", true);
+    tautology("forall x. P(x) => P(x)", true);
+    tautology("P(x) and not P(x)", false);  // contradiction
+    tautology("P(x)", false);              // satisfiable but not tautology
 }
 
 
 #[test]
-fn test_pipeline_unsatisfiable() {
-    pipeline("forall a. P(a) and not P(a)", false);
-    pipeline("P(x) and not P(x)", false);
-    pipeline("(P(x) or Q(x)) and (not P(x)) and (not Q(x))", false);
-    pipeline("(P(x)) and (not P(x) or Q(x)) and (not Q(x))", false);
-    pipeline("(P(x) or Q(x)) and (not P(x) or Q(x)) and (P(x) or not Q(x)) and (not P(x) or not Q(x))", false);
-    pipeline("(P(x) or Q(x)) and (not Q(x)) and (not P(x))", false);
-    pipeline("(P(x) or not P(x)) and (not P(a) or P(b)) and P(a)", false);
+fn test_satisfiable_satisfiable() {
+    satisfiable("P(x)", true);
+    satisfiable("(P(x) or not Q(x)) and (P(x) or not Q(x) or R(x)) and (not R(x))", true);
+    satisfiable("P(x) or Q(x)", true);
+    satisfiable("(P(x) or Q(x)) and (not P(x) or R(x))", true);
+    satisfiable("(P(x) or Q(x)) and (not Q(x) or R(x)) and (not R(x) or S(x))", true);
+    satisfiable("(P(x) or Q(x)) and (P(x) or not Q(x))", true);
+    satisfiable("(P(x)) and (Q(x)) and (R(x))", true);
+    satisfiable("forall a. P(f(a))", true);
+    satisfiable("forall a. not (P(a) and P(b))", true);
+    satisfiable("forall a. not (P(a) or P(b))", true);
+    satisfiable("not (forall x. P(x))", true);
+    satisfiable("not (exists x. P(x))", true);
+    satisfiable("not (forall x. exists y. (P(x) and Q(y)))", true);
+    satisfiable("forall a. forall b. P(a) <=> P(b)", true);
+    satisfiable("forall x. P(x) => Q(x)", true);
+    satisfiable("forall x. exists y. forall z. exists w. P(x,y,z,w)", true);
+    satisfiable("exists x. (forall y. (P(x, y) and Q(x)))", true);
+    satisfiable("forall x. exists y. exists z. (P(x) and Q(y) and R(z))", true);
+    satisfiable("forall x. (P(x) <=> forall y. Q(y) and exists z. R(z))", true);
+    satisfiable("forall a. P(a) and (forall b. P(b))", true);
+    satisfiable("forall x. (exists y. (P(x) => Q(y)))", true);
+    satisfiable("forall x. P(x) and forall y. Q(y)", true);
+    satisfiable("exists x. P(x) or exists y. Q(y)", true);
+    satisfiable("forall x. P(x) => exists y. Q(y)", true);
+    satisfiable("forall x. (P(x) => forall y. (Q(y) => exists z. R(z)))", true);
+    satisfiable("forall x. forall y. forall z. P(f(x)) and P(y) and P(z)", true);
+    satisfiable("exists x. exists y. P(x, y)", true);
+    satisfiable("exists x. forall y. P(x) and Q(y)", true);
+    satisfiable("forall x. exists y. P(x, y) and Q(y)", true);
+    satisfiable("exists x. forall y. exists z. P(x, y, z)", true);
+    satisfiable("forall x. exists y. (P(x) => Q(y))", true);
+    satisfiable("forall x. (exists y. (P(x) => Q(y))) and R(x)", true);
+    satisfiable("exists x. exists y. forall z. P(x, y, z) and Q(x, y)", true);
+    satisfiable("forall x. (exists y. (P(x) => exists z. Q(y, z)))", true);
+    satisfiable("not (exists x. exists y. P(x, y))", true);
+    satisfiable("forall x. (exists y. (P(x, y) => Q(y)))", true);
+    satisfiable("exists x. forall y. exists z. (P(x, y) and Q(z))", true);
+    satisfiable("forall x. (exists y. (P(x) and Q(y))) and R(x)", true);
+    satisfiable("forall x. (P(x) and exists y. Q(x, y)) <=> not (P(x))", true);
+}
+
+
+#[test]
+fn test_satisfiable_unsatisfiable() {
+    satisfiable("forall a. P(a) and not P(a)", false);
+    satisfiable("P(x) and not P(x)", false);
+    satisfiable("(P(x) or Q(x)) and (not P(x)) and (not Q(x))", false);
+    satisfiable("(P(x)) and (not P(x) or Q(x)) and (not Q(x))", false);
+    satisfiable("(P(x) or Q(x)) and (not P(x) or Q(x)) and (P(x) or not Q(x)) and (not P(x) or not Q(x))", false);
+    satisfiable("(P(x) or Q(x)) and (not Q(x)) and (not P(x))", false);
+    satisfiable("(P(x) or not P(x)) and (not P(a) or P(b)) and P(a)", false);
 }
