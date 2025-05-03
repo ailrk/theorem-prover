@@ -80,6 +80,9 @@ fn push_negations(formula: Formula<Raw>, pushed: &mut u32) -> Formula<Raw> {
                     *pushed += 1;
                     Formula::forall(var, Formula::not(push_negations(*formula, pushed)))
                 }
+                Formula::Not(Not { formula, .. }) => {
+                    push_negations(*formula, pushed)
+                }
                 _ => {
                     Formula::not(push_negations(*formula, pushed))
                 }

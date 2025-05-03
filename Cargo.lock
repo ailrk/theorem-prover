@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "theorem-prover"
+name = "theorem_prover"
 version = "0.1.0"
