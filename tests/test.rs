@@ -1,7 +1,4 @@
 extern crate theorem_prover;
-extern crate flate2;
-extern crate tar;
-extern crate tempfile;
 use theorem_prover::fol::ast::Formula;
 use theorem_prover::fol::ast::Raw;
 use theorem_prover::fol::parser;

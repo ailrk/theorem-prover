@@ -5,32 +5,42 @@ use crate::sat::clauses::*;
 
 pub fn satisfiable_dp(mut clauses: Clauses) -> bool {
     loop {
+        println!("loop. clause size: {:?}", clauses.0.len());
+        println!("{}", clauses);
         if clauses.0.is_empty() {
+            println!("{}", clauses);
             return true;
         } else if clauses.0.iter().any(|clause| clause.is_empty()) {
+            println!("{}", clauses);
             return false;
         } else {
-            match one_literal_rule(clauses) {
+            match unit_propagation_rule(clauses) {
                 Ok(s) => {
+                    println!("::1 ok, {:?}", s.0.len());
                     clauses = s; continue;
                 },
                 Err(s) => {
+                    println!("::1 end, {:?}", s.0.len());
                     clauses = s;
                 }
             };
             match affirmative_negative_rule(clauses) {
                 Ok(s) => {
+                    println!("::2 ok, {:?}", s.0.len());
                     clauses = s; continue;
                 },
                 Err(s) => {
+                    println!("::2 end, {:?}", s.0.len());
                     clauses = s;
                 }
             }
             match resolution_rule(clauses) {
                 Ok(s) => {
+                    println!("::3 ok, {:?}", s.0.len());
                     clauses = s;
                 },
                 Err(s) => {
+                    println!("::3 end, {:?}", s.0.len());
                     clauses = s;
                 }
             }
@@ -39,26 +49,24 @@ pub fn satisfiable_dp(mut clauses: Clauses) -> bool {
 }
 
 
-/* Remove unit clause. If we have a clause we a single literal P,
+/* Remove unit clause. If we have a clause with a single literal P,
  * - Remove ¬P from other clauses.
  * - Remove clauses contains P including itself.
  * */
-fn one_literal_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
+pub fn unit_propagation_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
     let mut value = None;
     for clause in clauses.0.iter() {
         if clause.len() == 1 {
             value = clause.iter().next().cloned();
+            println!("1: {:?}, {:?}", value, clause);
             break
         }
     }
 
     if let Some(unit) = value {
         let neg = unit.negate();
-        for clause in clauses.0.iter_mut() {
-            if clause.contains(&neg) {
-                clause.remove(&neg);
-            }
-        }
+        let remove = |c: &mut Clause| if c.contains(&neg) { c.remove(&neg); } else {};
+        clauses.0.iter_mut().for_each(remove);
         clauses.0.retain(|c| !c.contains(&unit));
     } else {
         return Err(clauses)
@@ -69,10 +77,10 @@ fn one_literal_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
 
 /* If a literal occurs only positively or negatively, we can remove all clauses contain them
  * while preserving satisfiability. */
-fn affirmative_negative_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
+pub fn affirmative_negative_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
     const POS: u8 = 0b01; const NEG: u8 = 0b10;
     let mut occurrences: HashMap<String, u8> = HashMap::new();
-    for clause in clauses.0.iter() {
+    for clause in clauses.iter() {
         for literal in clause.iter() {
             let k = literal.var_name().to_string();
             let mask = if literal.is_negated() { NEG } else { POS };
@@ -82,20 +90,20 @@ fn affirmative_negative_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
             };
         }
     }
-    let pure_occurs = occurrences
+    let to_remove = occurrences
         .into_iter()
         .filter(|(_, o)| { *o == POS || *o == NEG })
         .map(|(k, _)| k)
         .collect::<Vec<_>>();
-    if pure_occurs.len() == 0 { return Err(clauses) }
-    clauses.0.retain(|c| {
-        let mut keep = false;
-        for pure in pure_occurs.iter() {
-            keep = keep
-                || c.contains(&Literal::pos(pure.to_string()))
-                || c.contains(&Literal::neg(pure.to_string()));
+    if to_remove.len() == 0 { return Err(clauses) }
+    clauses.retain(|c| {
+        let mut keep = true;
+        for pure in to_remove.iter() {
+            if c.contains(&Literal::pos(pure.to_string())) || c.contains(&Literal::neg(pure.to_string())) {
+                keep = false;
+            }
         }
-        !keep
+        keep
     });
     Ok(clauses)
 }
@@ -121,9 +129,9 @@ fn affirmative_negative_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
  * DP will simply try to iterate through all symbols in the cnf and try to resolve them in
  * turn. There are better way to pick literal in more optimized algorithms.
  * */
-fn resolution_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
+pub fn resolution_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
     let mut occurrences = HashMap::new();
-    for clause in clauses.0.iter() {
+    for clause in clauses.iter() {
         for literal in clause.iter() {
             if let Some(v) = occurrences.get_mut(literal.var_name()) {
                 *v += 1;
@@ -133,15 +141,17 @@ fn resolution_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
         }
     }
     let mut symbols: Vec<_> = occurrences.iter().collect();
-    symbols.sort_by_key(|&(_, v)| v);
+    symbols.sort_by_key(|&(_, v)| -v);
 
-    let mut resolvents = vec![];
+    let mut resolvents = Clauses::new();
     for symbol in symbols.into_iter().map(|(k,_)| k) {
         let p = Literal::pos(symbol.clone());
         let n = Literal::neg(symbol.clone());
+
         let mut pos = Vec::new();
         let mut neg = Vec::new();
-        for (idx, clause) in clauses.0.iter_mut().enumerate() {
+
+        clauses.iter_mut().enumerate().for_each(|(idx, clause)| {
             if clause.contains(&p) {
                 clause.remove(&p);
                 pos.push(idx);
@@ -149,29 +159,56 @@ fn resolution_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
                 clause.remove(&n);
                 neg.push(idx)
             }
-        }
-        for pidx in pos.iter_mut() {
+        });
+
+        for pidx in pos.iter_mut() { // cross over
             for nidx in neg.iter() {
-                let pclause = &clauses.0[*pidx];
-                let nclause = &clauses.0[*nidx];
-                let resolvent = pclause.union(nclause).cloned().collect::<HashSet<_>>();
+                let pclause = &clauses[*pidx];
+                let nclause = &clauses[*nidx];
+                let resolvent = pclause.union(nclause).cloned().collect::<Clause>();
                 resolvents.push(resolvent);
             }
         }
-        let to_remove = pos.into_iter().chain(neg).collect::<HashSet<_>>();
-        clauses = Clauses(clauses
-            .0
+
+        let need_to_remove = pos.into_iter().chain(neg).collect::<HashSet<_>>();
+        clauses = clauses.0
             .into_iter()
             .enumerate()
-            .filter(|(idx, _)| { !to_remove.contains(&idx)} )
+            .filter(|(idx, _)| { !need_to_remove.contains(&idx)} )
             .map(|(_, c)| c)
-            .collect::<Vec<_>>());
+            .collect();
     }
 
     if resolvents.is_empty() {
         return Err (clauses)
     }
 
-    clauses.0.append(&mut resolvents);
+    // for_eachremove_trivial_clauses();
+    clauses.append(&mut resolvents);
+    clauses = remove_trivial_clauses(clauses);
     Ok(clauses)
+}
+
+
+// Remove trivial tautology from clauses. If removing the tautology yeilds an empty clause, we
+// remove the empty clause completely.
+// This function preserves empty clauses that are already there.
+fn remove_trivial_clauses(mut clauses: Clauses) -> Clauses {
+    let n_empty_clauses = clauses.iter().filter(|c| c.len() == 0).count();
+    fn collapse(clause: &mut Clause) {
+        let symbols = clause.iter().map(|lit| lit.var_name().to_string()).collect::<Vec<_>>();
+        for symbol in symbols {
+            let pos = Literal::pos(symbol.clone());
+            let neg = Literal::neg(symbol);
+            if clause.contains(&pos) && clause.contains(&neg) {
+                clause.remove(&pos);
+                clause.remove(&neg);
+            }
+        }
+    }
+
+    clauses.iter_mut().for_each(collapse);
+    clauses.retain(|clause| !clause.is_empty());
+    clauses.append(&mut std::iter::repeat_n(Clause::new(), n_empty_clauses).collect::<Clauses>());
+    clauses
 }
