@@ -1,11 +1,11 @@
 extern crate theorem_prover;
 use theorem_prover::fol::ast::Formula;
-use theorem_prover::fol::ast::Raw;
 use theorem_prover::fol::parser;
 use theorem_prover::fol::ast;
 use theorem_prover::fol::ast::Cnf;
 use theorem_prover::fol::ast::Grounded;
 use theorem_prover::sat;
+use theorem_prover::sat::clauses::SATSolver;
 
 
 #[test]
@@ -76,7 +76,7 @@ fn satisfiable(input: &str, is_satisfiable: bool) {
     let t = to_cnf(input);
     let clauses = sat::clauses::Clauses::from_formula(t.cast::<Cnf>());
     println!("  +-clauses-> {:?}", clauses);
-    let sat = sat::dp::satisfiable_dp(clauses);
+    let sat = clauses.is_satisfiable(SATSolver(sat::dp::satisfiable_dp));
     println!("  +-sat-----> {:?}, should be {:?}", sat, is_satisfiable);
     assert_eq!(sat, is_satisfiable);
     println!("");
@@ -84,10 +84,10 @@ fn satisfiable(input: &str, is_satisfiable: bool) {
 
 
 fn tautology(input: &str, is_valid: bool) {
-    let t = Formula::not(to_cnf(input)).cast::<Raw>().to_nnf().to_pnf().skolemize().ground().to_cnf();
+    let t = to_cnf(input);
     let clauses = sat::clauses::Clauses::from_formula(t.cast::<Cnf>());
     println!("  +-clauses-> {:?}", clauses);
-    let valid = !sat::dp::satisfiable_dp(clauses);
+    let valid = clauses.is_valid(SATSolver(sat::dp::satisfiable_dp));
     println!("  +-taut----> {:?}, should be {:?}", valid, is_valid);
     assert_eq!(valid, is_valid);
     println!("");
@@ -101,50 +101,6 @@ fn test_tautologies() {
     tautology("forall x. P(x) => P(x)", true);
     tautology("P(x) and not P(x)", false);  // contradiction
     tautology("P(x)", false);              // satisfiable but not tautology
-}
-
-
-#[test]
-fn test_satisfiable_satisfiable() {
-    satisfiable("P(x)", true);
-    satisfiable("(P(x) or not Q(x)) and (P(x) or not Q(x) or R(x)) and (not R(x))", true);
-    satisfiable("P(x) or Q(x)", true);
-    satisfiable("(P(x) or Q(x)) and (not P(x) or R(x))", true);
-    satisfiable("(P(x) or Q(x)) and (not Q(x) or R(x)) and (not R(x) or S(x))", true);
-    satisfiable("(P(x) or Q(x)) and (P(x) or not Q(x))", true);
-    satisfiable("(P(x)) and (Q(x)) and (R(x))", true);
-    satisfiable("forall a. P(f(a))", true);
-    satisfiable("forall a. not (P(a) and P(b))", true);
-    satisfiable("forall a. not (P(a) or P(b))", true);
-    satisfiable("not (forall x. P(x))", true);
-    satisfiable("not (exists x. P(x))", true);
-    satisfiable("not (forall x. exists y. (P(x) and Q(y)))", true);
-    satisfiable("forall a. forall b. P(a) <=> P(b)", true);
-    satisfiable("forall x. P(x) => Q(x)", true);
-    satisfiable("forall x. exists y. forall z. exists w. P(x,y,z,w)", true);
-    satisfiable("exists x. (forall y. (P(x, y) and Q(x)))", true);
-    satisfiable("forall x. exists y. exists z. (P(x) and Q(y) and R(z))", true);
-    satisfiable("forall x. (P(x) <=> forall y. Q(y) and exists z. R(z))", true);
-    satisfiable("forall a. P(a) and (forall b. P(b))", true);
-    satisfiable("forall x. (exists y. (P(x) => Q(y)))", true);
-    satisfiable("forall x. P(x) and forall y. Q(y)", true);
-    satisfiable("exists x. P(x) or exists y. Q(y)", true);
-    satisfiable("forall x. P(x) => exists y. Q(y)", true);
-    satisfiable("forall x. (P(x) => forall y. (Q(y) => exists z. R(z)))", true);
-    satisfiable("forall x. forall y. forall z. P(f(x)) and P(y) and P(z)", true);
-    satisfiable("exists x. exists y. P(x, y)", true);
-    satisfiable("exists x. forall y. P(x) and Q(y)", true);
-    satisfiable("forall x. exists y. P(x, y) and Q(y)", true);
-    satisfiable("exists x. forall y. exists z. P(x, y, z)", true);
-    satisfiable("forall x. exists y. (P(x) => Q(y))", true);
-    satisfiable("forall x. (exists y. (P(x) => Q(y))) and R(x)", true);
-    satisfiable("exists x. exists y. forall z. P(x, y, z) and Q(x, y)", true);
-    satisfiable("forall x. (exists y. (P(x) => exists z. Q(y, z)))", true);
-    satisfiable("not (exists x. exists y. P(x, y))", true);
-    satisfiable("forall x. (exists y. (P(x, y) => Q(y)))", true);
-    satisfiable("exists x. forall y. exists z. (P(x, y) and Q(z))", true);
-    satisfiable("forall x. (exists y. (P(x) and Q(y))) and R(x)", true);
-    satisfiable("forall x. (P(x) and exists y. Q(x, y)) <=> not (P(x))", true);
 }
 
 

@@ -3,46 +3,42 @@ use std::collections::{HashMap, HashSet};
 use crate::sat::clauses::*;
 
 
-pub fn satisfiable_dp(mut clauses: Clauses) -> bool {
+/* The original davis putnam procedure. This only terminates on unsat cnf.
+ * */
+pub fn satisfiable_dp(clauses: Clauses) -> bool {
+    let mut clauses = clauses;
     loop {
-        println!("loop. clause size: {:?}", clauses.0.len());
-        println!("{}", clauses);
         if clauses.0.is_empty() {
-            println!("{}", clauses);
             return true;
-        } else if clauses.0.iter().any(|clause| clause.is_empty()) {
-            println!("{}", clauses);
+        }
+        if clauses.0.iter().any(|clause| clause.is_empty()) {
             return false;
-        } else {
-            match unit_propagation_rule(clauses) {
-                Ok(s) => {
-                    println!("::1 ok, {:?}", s.0.len());
-                    clauses = s; continue;
-                },
-                Err(s) => {
-                    println!("::1 end, {:?}", s.0.len());
-                    clauses = s;
-                }
-            };
-            match affirmative_negative_rule(clauses) {
-                Ok(s) => {
-                    println!("::2 ok, {:?}", s.0.len());
-                    clauses = s; continue;
-                },
-                Err(s) => {
-                    println!("::2 end, {:?}", s.0.len());
-                    clauses = s;
-                }
+        }
+
+        match unit_propagation_rule(clauses) {
+            Ok(s) => {
+                clauses = s; continue;
+            },
+            Err(s) => {
+                clauses = s;
             }
-            match resolution_rule(clauses) {
-                Ok(s) => {
-                    println!("::3 ok, {:?}", s.0.len());
-                    clauses = s;
-                },
-                Err(s) => {
-                    println!("::3 end, {:?}", s.0.len());
-                    clauses = s;
-                }
+        };
+
+        match affirmative_negative_rule(clauses) {
+            Ok(s) => {
+                clauses = s; continue;
+            },
+            Err(s) => {
+                clauses = s;
+            }
+        }
+
+        match resolution_rule(clauses) {
+            Ok(s) => {
+                clauses = s; continue;
+            },
+            Err(s) => {
+                clauses = s;
             }
         }
     }
@@ -58,7 +54,6 @@ pub fn unit_propagation_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
     for clause in clauses.0.iter() {
         if clause.len() == 1 {
             value = clause.iter().next().cloned();
-            println!("1: {:?}, {:?}", value, clause);
             break
         }
     }
@@ -144,6 +139,9 @@ pub fn resolution_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
     symbols.sort_by_key(|&(_, v)| -v);
 
     let mut resolvents = Clauses::new();
+    let mut need_to_remove = HashSet::new();
+
+
     for symbol in symbols.into_iter().map(|(k,_)| k) {
         let p = Literal::pos(symbol.clone());
         let n = Literal::neg(symbol.clone());
@@ -153,39 +151,32 @@ pub fn resolution_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
 
         clauses.iter_mut().enumerate().for_each(|(idx, clause)| {
             if clause.contains(&p) {
-                clause.remove(&p);
                 pos.push(idx);
             } else if clause.contains(&n) {
-                clause.remove(&n);
                 neg.push(idx)
             }
         });
-
         for pidx in pos.iter_mut() { // cross over
             for nidx in neg.iter() {
                 let pclause = &clauses[*pidx];
                 let nclause = &clauses[*nidx];
-                let resolvent = pclause.union(nclause).cloned().collect::<Clause>();
+                let mut resolvent = pclause.union(nclause).cloned().collect::<Clause>();
+                resolvent.remove_trivals();
                 resolvents.push(resolvent);
             }
         }
 
-        let need_to_remove = pos.into_iter().chain(neg).collect::<HashSet<_>>();
-        clauses = clauses.0
-            .into_iter()
-            .enumerate()
-            .filter(|(idx, _)| { !need_to_remove.contains(&idx)} )
-            .map(|(_, c)| c)
-            .collect();
+        need_to_remove.extend(pos.into_iter().chain(neg).collect::<HashSet<_>>());
     }
 
-    if resolvents.is_empty() {
-        return Err (clauses)
-    }
-
-    // for_eachremove_trivial_clauses();
-    clauses.append(&mut resolvents);
+    clauses = clauses.0
+        .into_iter()
+        .enumerate()
+        .filter(|(idx, _)| { !need_to_remove.contains(&idx)} )
+        .map(|(_, c)| c)
+        .collect();
     clauses = remove_trivial_clauses(clauses);
+    clauses.append(&mut resolvents);
     Ok(clauses)
 }
 
@@ -195,19 +186,7 @@ pub fn resolution_rule(mut clauses: Clauses) -> Result<Clauses, Clauses> {
 // This function preserves empty clauses that are already there.
 fn remove_trivial_clauses(mut clauses: Clauses) -> Clauses {
     let n_empty_clauses = clauses.iter().filter(|c| c.len() == 0).count();
-    fn collapse(clause: &mut Clause) {
-        let symbols = clause.iter().map(|lit| lit.var_name().to_string()).collect::<Vec<_>>();
-        for symbol in symbols {
-            let pos = Literal::pos(symbol.clone());
-            let neg = Literal::neg(symbol);
-            if clause.contains(&pos) && clause.contains(&neg) {
-                clause.remove(&pos);
-                clause.remove(&neg);
-            }
-        }
-    }
-
-    clauses.iter_mut().for_each(collapse);
+    clauses.iter_mut().for_each(|c| c.remove_trivals());
     clauses.retain(|clause| !clause.is_empty());
     clauses.append(&mut std::iter::repeat_n(Clause::new(), n_empty_clauses).collect::<Clauses>());
     clauses

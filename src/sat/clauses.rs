@@ -1,5 +1,10 @@
 use crate::fol::ast::*;
-use std::{collections::HashSet, fmt::Display, iter::FromIterator, ops::{Deref, DerefMut}};
+use crate::sat::dimacs;
+use std::{collections::HashSet, iter::FromIterator};
+use std:: ops::{Deref, DerefMut};
+use std::fmt::Display;
+use std::io;
+use std::io::BufRead;
 
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
@@ -40,6 +45,10 @@ pub struct Clauses(pub Vec<Clause>);
 
 #[derive(Debug, Clone)]
 pub struct Clause(pub HashSet<Literal>);
+
+
+#[derive(Debug, Clone)]
+pub struct SATSolver(pub fn(Clauses) -> bool);
 
 
 impl Deref for Clauses {
@@ -115,6 +124,18 @@ impl Clause {
     pub fn new() -> Self {
         Clause(HashSet::new())
     }
+
+    pub fn remove_trivals(&mut self) {
+        let symbols = self.iter().map(|lit| lit.var_name().to_string()).collect::<Vec<_>>();
+        for symbol in symbols {
+            let pos = Literal::pos(symbol.clone());
+            let neg = Literal::neg(symbol);
+            if self.contains(&pos) && self.contains(&neg) {
+                self.remove(&pos);
+                self.remove(&neg);
+            }
+        }
+    }
 }
 
 
@@ -125,14 +146,46 @@ impl Clauses {
         result
     }
 
+    pub fn to_formula(&self) -> Formula<Cnf> {
+        fn on_clause(clause: Clause) -> Formula<Cnf> {
+            clause.iter().map(on_lit).collect::<Vec<_>>().into_iter().reduce(|l, r| { Formula::or(l, r) }).unwrap()
+        }
+
+        fn on_lit(lit: &Literal) -> Formula<Cnf> {
+            match lit {
+                Literal::Pos(s) => Formula::pred(&s, vec![]),
+                Literal::Neg(s) => Formula::not(Formula::pred(&s, vec![])),
+            }
+        }
+        self.iter()
+            .cloned()
+            .map(on_clause)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .reduce(|l, r| { Formula::and(l, r) })
+            .unwrap()
+    }
+
+    pub fn from_dimacs<R: BufRead>(reader: R) -> io::Result<Self> {
+        dimacs::parse(reader)
+    }
+
     pub fn new() -> Self {
         Clauses(Vec::new())
+    }
+
+    pub fn is_satisfiable(self,  sat: SATSolver) -> bool {
+        sat.0(self)
+    }
+
+    pub fn is_valid(self, sat: SATSolver) -> bool {
+        let neg = Formula::not(self.to_formula()).cast::<Raw>().to_nnf().to_pnf().skolemize().ground().to_cnf();
+        !sat.0(Clauses::from_formula(neg))
     }
 }
 
 
 fn collect_clauses(formula: Formula<Cnf>, clauses: &mut Clauses) {
-
     fn collect_branch(branch: Formula<Cnf>, clauses: &mut Clauses) {
         match branch {
             Formula::And(_) => {
@@ -163,7 +216,6 @@ fn collect_clauses(formula: Formula<Cnf>, clauses: &mut Clauses) {
 
 
 fn collect_disjunctives(formula: Formula<Cnf>, set: &mut Clause) {
-
     fn collect_branch(branch: Formula<Cnf>, set: &mut Clause) {
         match branch {
             Formula::Pred(_) => {

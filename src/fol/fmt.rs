@@ -94,14 +94,18 @@ impl<S: 'static> Formula<S> {
                 if std::any::TypeId::of::<S>() == std::any::TypeId::of::<Grounded>() {
                     write!(f, "{}", pred.unique())
                 } else {
-                    write!(f, "{}(", pred.name)?;
-                    for (idx, param) in pred.terms.iter().enumerate() {
-                        write!(f, "{}", param)?;
-                        if idx < pred.terms.len() - 1 {
-                            write!(f, ",")?;
+                    if pred.terms.len() == 0 {
+                        write!(f, "{}", pred.name)
+                    } else {
+                        write!(f, "{}(", pred.name)?;
+                        for (idx, param) in pred.terms.iter().enumerate() {
+                            write!(f, "{}", param)?;
+                            if idx < pred.terms.len() - 1 {
+                                write!(f, ",")?;
+                            }
                         }
+                        write!(f, ")")
                     }
-                    write!(f, ")")
                 }
             },
             Formula::Not(not) => {
