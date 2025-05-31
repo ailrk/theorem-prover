@@ -18,13 +18,6 @@ impl SkolemState {
 }
 
 
-impl Formula<Pnf> {
-    pub fn skolemize(self) -> Formula<Skolemized> {
-        skolemize(self)
-    }
-}
-
-
 /* Perform skolemization to eliminate existial quantifiers.
  * The input `formula` needs to be in PNF form.
  * Skolemized formula will have no existential quantifiers, the existing one will be
@@ -36,7 +29,7 @@ impl Formula<Pnf> {
  *
  * The resulting formula is Equisatisfiable to the original one.
  * */
-fn skolemize(mut formula: Formula<Pnf> ) -> Formula<Skolemized> {
+pub fn skolemize(mut formula: Formula<Pnf>) -> Formula<Skolemized> {
     let mut uvars = vec![];
     collect_universal_vars(&formula, &mut uvars);
     let uvars = uvars;
